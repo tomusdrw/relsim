@@ -238,6 +238,113 @@
       font-size: 11px;
       color: #6b7689;
     }
+
+    /* ====================== Mobile responsiveness ====================== */
+    @media (max-width: 600px) {
+      .app {
+        padding: 8px;
+      }
+      .main {
+        gap: 8px;
+      }
+      header {
+        margin-bottom: 8px;
+      }
+      h1 {
+        font-size: 18px;
+      }
+      .subtitle {
+        font-size: 11px;
+      }
+      .units {
+        font-size: 10px;
+      }
+      .controls {
+        padding: 10px;
+        gap: 10px;
+      }
+      .control-row {
+        gap: 6px;
+      }
+      label {
+        font-size: 11px;
+        min-width: 60px;
+      }
+      input[type="number"] {
+        width: 64px;
+        padding: 3px 4px;
+        font-size: 12px;
+      }
+      .info {
+        font-size: 10px;
+        gap: 4px 8px;
+        padding: 6px 8px;
+      }
+      .buttons {
+        gap: 4px;
+      }
+      button {
+        padding: 8px 10px;
+        font-size: 13px;
+        min-height: 40px;
+      }
+      .legend {
+        font-size: 10px;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .note {
+        font-size: 10px;
+      }
+      .clock-value {
+        font-size: 15px;
+      }
+      .clock-label {
+        font-size: 10.5px;
+      }
+      .legend .note {
+        flex-basis: 100%;
+        margin-top: 2px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .app {
+        padding: 6px;
+      }
+      .main {
+        gap: 6px;
+      }
+      h1 {
+        font-size: 16px;
+      }
+      .subtitle {
+        font-size: 10px;
+      }
+      .clock-value {
+        font-size: 14px;
+      }
+      button {
+        font-size: 12px;
+        padding: 7px 8px;
+      }
+      .info {
+        font-size: 9px;
+      }
+      .legend {
+        font-size: 9px;
+      }
+      #label-earth, #label-asteroid {
+        font-size: 9px !important;
+      }
+      .legend .note {
+        flex-basis: 100%;
+        margin-top: 2px;
+      }
+      .units {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -256,8 +363,8 @@
         <div class="viz-container" id="viz-wrap">
           <canvas id="viz" width="720" height="420"></canvas>
           <!-- World labels (small, inside viz) -->
-          <div id="label-earth" style="position:absolute; font-size:11px; color:#7fa8e0; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Earth</div>
-          <div id="label-asteroid" style="position:absolute; font-size:11px; color:#b89d7a; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Asteroid</div>
+          <div id="label-earth" style="position:absolute; font-size:10px; color:#7fa8e0; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Earth</div>
+          <div id="label-asteroid" style="position:absolute; font-size:10px; color:#b89d7a; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Asteroid</div>
         </div>
 
         <!-- Nice clocks outside the visualization -->
@@ -858,8 +965,10 @@
     function forceInitialLayout() {
       // Make size match container early
       const rect = wrap.getBoundingClientRect();
-      width = Math.max(560, Math.floor(rect.width || 720));
-      height = Math.max(320, Math.floor(width * 0.58));
+      width = Math.max(280, Math.floor(rect.width || 360));
+      let aspect = 0.55;
+      if (width < 420) aspect = 0.62;
+      height = Math.max(170, Math.floor(width * aspect));
       canvas.width = width;
       canvas.height = height;
       if (renderer) renderer.setSize(width, height);
@@ -876,7 +985,7 @@
       const viewHeight = viewWidth / aspect;
 
       // Keep a minimum vertical view so routes are visible
-      const minH = 5.2;
+      const minH = width < 420 ? 3.8 : 4.8;
       const h = Math.max(viewHeight, minH);
       const w = h * aspect;
 
@@ -1263,9 +1372,11 @@
     // ============ Resize ============
     function resizeCanvas() {
       const rect = wrap.getBoundingClientRect();
-      // Maintain aspect from original but allow wider
-      width = Math.max(560, Math.floor(rect.width));
-      height = Math.max(320, Math.floor(width * 420 / 720));
+      // Mobile friendly sizing
+      width = Math.max(280, Math.floor(rect.width));
+      let aspect = 0.55;
+      if (width < 420) aspect = 0.62; // taller on small screens for better visibility
+      height = Math.max(170, Math.floor(width * aspect));
 
       canvas.width = width;
       canvas.height = height;
