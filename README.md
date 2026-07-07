@@ -70,6 +70,20 @@ No build step is required — it's a single self-contained HTML file (Three.js i
 - Canvas-generated cartoon-style sprites (no external image assets)
 - GitHub Actions for automatic deployment to GitHub Pages
 
+## Deployment
+
+This project is automatically deployed to GitHub Pages using GitHub Actions whenever changes are pushed to `main`.
+
+**Live site:** [https://tomusdrw.github.io/relsim/](https://tomusdrw.github.io/relsim/)
+
+### Enabling GitHub Pages (for forks)
+
+If you fork this repository:
+
+1. Go to your fork → **Settings → Pages**
+2. Under "Build and deployment", set **Source** to **GitHub Actions**
+3. The included workflow (`.github/workflows/deploy.yml`) will handle the rest.
+
 ## Development
 
 To contribute or experiment:
