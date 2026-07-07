@@ -351,8 +351,8 @@
 
         <div class="note">
           The four clocks show proper times and <strong>light-signal observations</strong> (signals travel at c).<br>
-          Local Earth = reception time of ship’s signal at Earth.<br>
-          Local Ship = ship proper time at its current event.
+          "Earth time (local)" is Earth's coordinate time t simultaneous with the ship's true position.<br>
+          "Ship time (observed)" from Earth is the ship's proper time at the retarded (light-delayed) position.
         </div>
       </div>
     </div>
@@ -386,11 +386,19 @@
       }
 
       // Light signal observations (c=1)
-      // Current ship event: (t, x, τ)
-      const earthRecv = t + x;      // Earth local time when receiving signal from current ship event
-      const shipObs = tau;          // Ship clock reading observed at Earth (at earthRecv)
+      // "Earth now" is defined as coordinate time t (Earth-frame simultaneous with the ship's current event).
+      const earthLocal = t;
+
+      // Ship time observed from Earth at time t: the proper time of the ship at the retarded emission event
+      // whose light is arriving at Earth right now (at t). This accounts for light travel time.
+      const retarded = getObservedPositionFromEarth(D, beta, t);
+      const shipObs = retarded.te / gamma;
+
       const shipLocal = tau;
-      const earthObs = t - x;       // Earth time observed by ship at its current event (light from Earth)
+      const earthObs = t - x;       // Earth emission time whose light arrives at the ship at its current event t
+
+      // (For reference only) Time on Earth when the light *from the current ship event* will arrive.
+      const earthRecv = t + x;
 
       return {
         progress: Math.max(0, Math.min(1, progress)),
@@ -400,14 +408,16 @@
         earthRecv,
         shipObs,
         shipLocal,
-        earthObs
+        earthObs,
+        earthLocal
       };
     }
 
     function getObservedPositionFromEarth(D, beta, tNow) {
-      // Returns the position (x, leg) on the worldline from which light is arriving
-      // at Earth at coordinate time tNow (the apparent / retarded position).
-      if (tNow <= 0) return { x: 0, leg: 'out' };
+      // Returns the emission event on the ship's worldline whose light is arriving
+      // at Earth at coordinate time tNow.
+      // Returns { x, leg, te } where te is the emission coordinate time.
+      if (tNow <= 0) return { x: 0, leg: 'out', te: 0 };
 
       const T1 = D / beta;
       const T = 2 * T1;
@@ -415,7 +425,7 @@
       // Emission on outbound leg?
       let te = tNow / (1 + beta);
       if (te >= 0 && te <= T1) {
-        return { x: beta * te, leg: 'out' };
+        return { x: beta * te, leg: 'out', te };
       }
 
       // Emission on inbound leg?
@@ -423,12 +433,12 @@
       if (te >= T1 && te <= T) {
         let x = D - beta * (te - T1);
         x = Math.max(0, Math.min(D, x));
-        return { x, leg: 'in' };
+        return { x, leg: 'in', te };
       }
 
       // Fallbacks at the end
-      if (tNow >= T) return { x: 0, leg: 'in' };
-      return { x: D, leg: 'out' };
+      if (tNow >= T) return { x: 0, leg: 'in', te: T };
+      return { x: D, leg: 'out', te: T1 };
     }
 
     // ============ Cartoon Texture Generators (self-contained, cute style) ============
@@ -928,6 +938,7 @@
       shipMesh.rotation.z = 0;  // planes face camera
 
       // Shadow ship + halo: observed position from Earth (light delay)
+      // This uses the same retarded event as "Ship time (observed)" above Earth.
       const obs = getObservedPositionFromEarth(D, beta, state.t);
       const sy = (obs.leg === 'out') ? routeOutY : routeInY;
       shadowShipMesh.position.set(obs.x, sy, 0.01);
@@ -947,7 +958,7 @@
     function updateClocks(state) {
       const fmt = (v) => (isFinite(v) ? v.toFixed(2) : '0.00');
 
-      document.getElementById('earth-local').textContent = fmt(state.earthRecv);
+      document.getElementById('earth-local').textContent = fmt(state.earthLocal);
       document.getElementById('earth-ship').textContent = fmt(state.shipObs);
       document.getElementById('ship-local').textContent = fmt(state.shipLocal);
       document.getElementById('ship-earth').textContent = fmt(state.earthObs);
