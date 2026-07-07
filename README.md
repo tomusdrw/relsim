@@ -1,11 +1,11 @@
 # RelSim — Special Relativity Simulator
 
 [![Deploy to GitHub Pages](https://github.com/tomusdrw/relsim/actions/workflows/deploy.yml/badge.svg)](https://github.com/tomusdrw/relsim/actions/workflows/deploy.yml)
-[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://tomusdrw.github.io/relsim/)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://todr.me/relsim/)
 
 An interactive WebGL visualization of special relativity, demonstrating the twin paradox with light-signal propagation.
 
-**👉 Live Demo:** [https://tomusdrw.github.io/relsim/](https://tomusdrw.github.io/relsim/)
+**👉 Live Demo:** [https://todr.me/relsim/](https://todr.me/relsim/)
 
 ## Features
 
@@ -74,7 +74,7 @@ No build step is required — it's a single self-contained HTML file (Three.js i
 
 This project is automatically deployed to GitHub Pages using GitHub Actions whenever changes are pushed to `main`.
 
-**Live site:** [https://tomusdrw.github.io/relsim/](https://tomusdrw.github.io/relsim/)
+**Live site:** [https://todr.me/relsim/](https://todr.me/relsim/)
 
 ### Enabling GitHub Pages (for forks)
 
