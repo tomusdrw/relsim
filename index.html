@@ -65,8 +65,26 @@
     canvas {
       display: block;
       width: 100%;
+      max-width: 100%;
       height: auto;
       outline: none;
+    }
+
+    /* Prevent horizontal overflow on mobile */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+    .app {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    .main {
+      max-width: 100%;
+    }
+    .viz-container {
+      max-width: 100%;
+      overflow: hidden;
     }
 
     /* ====================== New nice clocks (outside viz) ====================== */
@@ -280,6 +298,9 @@
         gap: 4px 8px;
         padding: 6px 8px;
       }
+      .info .k {
+        font-size: 9px;
+      }
       .buttons {
         gap: 4px;
       }
@@ -331,8 +352,13 @@
       .info {
         font-size: 9px;
       }
+      .info .k {
+        font-size: 8px;
+      }
       .legend {
         font-size: 9px;
+        flex-wrap: wrap;
+        align-items: flex-start;
       }
       #label-earth, #label-asteroid {
         font-size: 9px !important;
@@ -361,7 +387,7 @@
       <!-- Visualization -->
       <div>
         <div class="viz-container" id="viz-wrap">
-          <canvas id="viz" width="720" height="420"></canvas>
+          <canvas id="viz"></canvas>
           <!-- World labels (small, inside viz) -->
           <div id="label-earth" style="position:absolute; font-size:10px; color:#7fa8e0; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Earth</div>
           <div id="label-asteroid" style="position:absolute; font-size:10px; color:#b89d7a; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Asteroid</div>
@@ -657,7 +683,7 @@
       const cx = w * 0.42, cy = h * 0.5; // center of body
 
       const bodyColor = isGhost ? '#7edcff' : '#ff4d4d';
-      const accentColor = isGhost ? '#2a6a8f' : '#ffd133';
+      const accentColor = isGhost ? '#2a6a8f' : '#f0f4f8';  // light nose cone (was yellow, looked engine-like in front)
       const finColor = isGhost ? '#3e8bc4' : '#2e5aa8';
       const windowColor = isGhost ? '#e0f8ff' : '#a8d8ff';
       const outlineColor = isGhost ? '#0f2a44' : '#1a1f2e';
@@ -690,22 +716,32 @@
       ctx.fill();
       ctx.stroke();
 
-      // Nose cone
+      // Nose cone (classic pointed, light color so it doesn't look like a front engine/flame)
       ctx.fillStyle = accentColor;
       ctx.beginPath();
-      ctx.moveTo(cx + 52, cy);
-      ctx.lineTo(cx + 82, cy - 14);
-      ctx.lineTo(cx + 82, cy + 14);
+      ctx.moveTo(cx + 55, cy - 16);
+      ctx.lineTo(cx + 85, cy);
+      ctx.lineTo(cx + 55, cy + 16);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      // Fins
+      // subtle nose highlight to look more like a proper cone (not engine)
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + 58, cy - 10);
+      ctx.lineTo(cx + 80, cy - 2);
+      ctx.stroke();
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = isGhost ? 6 : 7;  // restore for fins etc.
+
+      // Fins (at rear for classic rocket look)
       ctx.fillStyle = finColor;
       // top fin
       ctx.beginPath();
       ctx.moveTo(cx - 20, cy - 18);
-      ctx.lineTo(cx - 38, cy - 38);
+      ctx.lineTo(cx - 34, cy - 30);
       ctx.lineTo(cx - 10, cy - 18);
       ctx.closePath();
       ctx.fill();
@@ -713,16 +749,16 @@
       // bottom fin
       ctx.beginPath();
       ctx.moveTo(cx - 20, cy + 18);
-      ctx.lineTo(cx - 38, cy + 38);
+      ctx.lineTo(cx - 34, cy + 30);
       ctx.lineTo(cx - 10, cy + 18);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-      // side accent fin
+      // side accent fin (smaller)
       ctx.beginPath();
       ctx.moveTo(cx - 8, cy + 18);
-      ctx.lineTo(cx - 22, cy + 32);
-      ctx.lineTo(cx + 4, cy + 18);
+      ctx.lineTo(cx - 18, cy + 26);
+      ctx.lineTo(cx + 2, cy + 18);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
@@ -965,10 +1001,11 @@
     function forceInitialLayout() {
       // Make size match container early
       const rect = wrap.getBoundingClientRect();
-      width = Math.max(280, Math.floor(rect.width || 360));
+      const available = Math.min(rect.width || 360, window.innerWidth - 16 || 360);
+      width = Math.max(260, Math.floor(available));
       let aspect = 0.55;
-      if (width < 420) aspect = 0.62;
-      height = Math.max(170, Math.floor(width * aspect));
+      if (width < 400) aspect = 0.65;
+      height = Math.max(150, Math.floor(width * aspect));
       canvas.width = width;
       canvas.height = height;
       if (renderer) renderer.setSize(width, height);
@@ -1138,14 +1175,23 @@
       const lblAster = document.getElementById('label-asteroid');
       if (!lblEarth || !lblAster) return;
 
-      // Small labels under Earth and Asteroid inside the canvas area
-      const eLbl = worldToContainer(0, -0.82);
-      lblEarth.style.left = (eLbl.x - 17) + 'px';
-      lblEarth.style.top = (eLbl.y + 1) + 'px';
+      if (width < 300) {
+        lblEarth.style.display = 'none';
+        lblAster.style.display = 'none';
+        return;
+      }
+      lblEarth.style.display = '';
+      lblAster.style.display = '';
 
-      const aLbl = worldToContainer(D, -0.82);
-      lblAster.style.left = (aLbl.x - 25) + 'px';
-      lblAster.style.top = (aLbl.y + 1) + 'px';
+      // Place labels below both routes to avoid overlap with the return path
+      const labelY = Math.min(routeOutY, routeInY) - 0.5;
+      const eLbl = worldToContainer(0, labelY);
+      lblEarth.style.left = (eLbl.x - 14) + 'px';
+      lblEarth.style.top = (eLbl.y + 2) + 'px';
+
+      const aLbl = worldToContainer(D, labelY);
+      lblAster.style.left = (aLbl.x - 22) + 'px';
+      lblAster.style.top = (aLbl.y + 2) + 'px';
     }
 
     // ============ Interaction: click on route ============
@@ -1372,11 +1418,12 @@
     // ============ Resize ============
     function resizeCanvas() {
       const rect = wrap.getBoundingClientRect();
-      // Mobile friendly sizing
-      width = Math.max(280, Math.floor(rect.width));
+      // Mobile friendly: use actual container width, clamp to viewport
+      const available = Math.min(rect.width, window.innerWidth - 16);
+      width = Math.max(260, Math.floor(available));
       let aspect = 0.55;
-      if (width < 420) aspect = 0.62; // taller on small screens for better visibility
-      height = Math.max(170, Math.floor(width * aspect));
+      if (width < 400) aspect = 0.65; // taller on phones for visibility
+      height = Math.max(150, Math.floor(width * aspect));
 
       canvas.width = width;
       canvas.height = height;
@@ -1409,6 +1456,9 @@
       // Size
       window.addEventListener('resize', () => {
         resizeCanvas();
+      });
+      window.addEventListener('orientationchange', () => {
+        setTimeout(resizeCanvas, 100); // iOS needs a delay
       });
 
       // Extra safety pass after fonts/layout
