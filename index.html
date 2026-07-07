@@ -210,6 +210,37 @@
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      align-items: center;
+    }
+    .playback-rate {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .playback-rate label {
+      font-size: 10px;
+    }
+    .playback-rate input[type="range"] {
+      width: 70px;
+      accent-color: var(--accent);
+    }
+    .playback-rate span {
+      min-width: 32px;
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+    }
+    .time-controls {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .time-controls button {
+      font-size: 11px;
+      padding: 4px 8px;
+      min-height: 28px;
     }
     button {
       background: #1f2636;
@@ -303,6 +334,20 @@
       }
       .buttons {
         gap: 4px;
+      }
+      .playback-rate {
+        font-size: 10px;
+      }
+      .playback-rate input[type="range"] {
+        width: 60px;
+      }
+      .time-controls {
+        gap: 3px;
+      }
+      .time-controls button {
+        font-size: 10px;
+        padding: 3px 6px;
+        min-height: 26px;
       }
       button {
         padding: 8px 10px;
@@ -444,7 +489,7 @@
             <span style="color:#8a93a8;">Observed from Earth</span>
           </div>
           <div style="flex:1"></div>
-          <div class="note">Click a route line to place the <strong>true</strong> ship. Faint = light-delayed view from Earth.</div>
+          <div class="note">Click route to place ship • Click Earth for start/end • Click Asteroid for turnaround. Faint = light-delayed view from Earth.</div>
         </div>
       </div>
 
@@ -477,9 +522,18 @@
 
         <div class="buttons">
           <button id="btn-play" class="primary">▶ Play</button>
-          <button id="btn-reset">Reset</button>
-          <button id="btn-turn">Go to turnaround</button>
-          <button id="btn-end">Go to end</button>
+          <div class="playback-rate">
+            <label>Rate</label>
+            <input type="range" id="playback-slider" min="0.1" max="10" step="0.1" value="1">
+            <span id="playback-val">1.0x</span>
+          </div>
+        </div>
+
+        <div class="time-controls">
+          <button id="btn-e-minus" title="Subtract 1 Earth year (local)">-1 Earth y</button>
+          <button id="btn-e-plus" title="Add 1 Earth year (local)">+1 Earth y</button>
+          <button id="btn-s-minus" title="Subtract 1 Ship year (local)">-1 Ship y</button>
+          <button id="btn-s-plus" title="Add 1 Ship year (local)">+1 Ship y</button>
         </div>
 
         <div class="note">
@@ -864,7 +918,7 @@
     let progress = 0.0;
     let playing = false;
     let lastRafTime = 0;
-    let simSpeed = 0.6; // progress per real second (at speed=1 would be fast)
+    let playbackRate = 1.0; // animation speed multiplier
 
     // Three objects refs for updates
     let routeOut, routeIn; // meshes
@@ -1225,7 +1279,30 @@
 
       const { x: wx, y: wy } = getWorldFromMouse(e);
 
-      // Two segments in world units
+      const hitRadius = 0.65;
+
+      // Click on Asteroid → turnaround
+      if (Math.abs(wx - D) < hitRadius && Math.abs(wy) < hitRadius) {
+        const T1 = D / beta;
+        const T = 2 * T1;
+        const newProgress = T > 0 ? T1 / T : 0.5;
+        setStateFromProgress(newProgress);
+        return;
+      }
+
+      // Click on Earth → start (default), or end if already at start
+      if (Math.abs(wx) < hitRadius && Math.abs(wy) < hitRadius) {
+        if (progress < 0.05) {
+          // already at start → go to end
+          setStateFromProgress(1);
+        } else {
+          // go to start
+          setStateFromProgress(0);
+        }
+        return;
+      }
+
+      // Two segments in world units (route click for arbitrary position)
       const outP1 = { x: 0, y: routeOutY };
       const outP2 = { x: D, y: routeOutY };
       const inP1 = { x: D, y: routeInY };
@@ -1292,6 +1369,33 @@
       }
     }, { passive: false });
 
+    function stepEarthYears(delta) {
+      playing = false;
+      document.getElementById('btn-play').textContent = '▶ Play';
+      const T = 2 * (D / beta);
+      if (T <= 0) return;
+      const currentT = progress * T;
+      let newT = currentT + delta;
+      newT = Math.max(0, Math.min(T, newT));
+      const newProgress = newT / T;
+      setStateFromProgress(newProgress);
+    }
+
+    function stepShipYears(delta) {
+      playing = false;
+      document.getElementById('btn-play').textContent = '▶ Play';
+      const T = 2 * (D / beta);
+      if (T <= 0) return;
+      const gamma = computeGamma(beta);
+      const maxTau = T / gamma;
+      const currentTau = (progress * T) / gamma;
+      let newTau = currentTau + delta;
+      newTau = Math.max(0, Math.min(maxTau, newTau));
+      const newT = newTau * gamma;
+      const newProgress = newT / T;
+      setStateFromProgress(newProgress);
+    }
+
     // ============ Controls ============
     function setupControls() {
       const distSlider = document.getElementById('dist-slider');
@@ -1327,6 +1431,19 @@
         speedSlider.value = beta;
       });
 
+      // Playback rate slider (next to Play)
+      const playbackSlider = document.getElementById('playback-slider');
+      const playbackVal = document.getElementById('playback-val');
+      if (playbackSlider && playbackVal) {
+        playbackSlider.addEventListener('input', () => {
+          playbackRate = parseFloat(playbackSlider.value);
+          playbackVal.textContent = playbackRate.toFixed(1) + 'x';
+        });
+        // initial
+        playbackRate = parseFloat(playbackSlider.value);
+        playbackVal.textContent = playbackRate.toFixed(1) + 'x';
+      }
+
       // Buttons
       document.getElementById('btn-play').addEventListener('click', () => {
         playing = !playing;
@@ -1338,29 +1455,15 @@
         }
       });
 
-      document.getElementById('btn-reset').addEventListener('click', () => {
-        playing = false;
-        document.getElementById('btn-play').textContent = '▶ Play';
-        progress = 0;
-        updateAll();
-      });
-
-      document.getElementById('btn-turn').addEventListener('click', () => {
-        playing = false;
-        document.getElementById('btn-play').textContent = '▶ Play';
-        // Turnaround is at t = T1
-        const T1 = D / beta;
-        const T = 2 * T1;
-        progress = T > 0 ? T1 / T : 0.5;
-        updateAll();
-      });
-
-      document.getElementById('btn-end').addEventListener('click', () => {
-        playing = false;
-        document.getElementById('btn-play').textContent = '▶ Play';
-        progress = 1;
-        updateAll();
-      });
+      // Time step buttons (local times)
+      const btnEMinus = document.getElementById('btn-e-minus');
+      const btnEPlus = document.getElementById('btn-e-plus');
+      const btnSMinus = document.getElementById('btn-s-minus');
+      const btnSPlus = document.getElementById('btn-s-plus');
+      if (btnEMinus) btnEMinus.addEventListener('click', () => stepEarthYears(-1));
+      if (btnEPlus) btnEPlus.addEventListener('click', () => stepEarthYears(1));
+      if (btnSMinus) btnSMinus.addEventListener('click', () => stepShipYears(-1));
+      if (btnSPlus) btnSPlus.addEventListener('click', () => stepShipYears(1));
 
       // Keyboard
       window.addEventListener('keydown', (e) => {
@@ -1397,7 +1500,7 @@
       lastRafTime = now;
 
       // Advance using Earth coordinate time at a pleasant fixed rate (years/sec)
-      const yearsPerSec = 1.8; // nice speed for visualization
+      const yearsPerSec = 1.8 * playbackRate; // nice speed for visualization
       const T = 2 * (D / beta);
       const t = progress * T + dt * yearsPerSec;
       progress = T > 1e-9 ? Math.min(1, t / T) : 1;
