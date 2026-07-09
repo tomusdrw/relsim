@@ -157,6 +157,36 @@
       color: #6b7689;
       margin-left: 2px;
     }
+    .clock-row.clock-local { align-items: center; }
+    .stepper { display: inline-flex; align-items: center; gap: 6px; }
+    .step-val {
+      font-family: ui-monospace, Menlo, Monaco, Consolas, "SF Mono", monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: #f4f7fc;
+      letter-spacing: -0.3px;
+      min-width: 54px;
+      text-align: center;
+    }
+    .step-val .unit { font-size: 10px; font-weight: 500; color: #6b7689; margin-left: 2px; }
+    .step-btn {
+      min-width: 22px;
+      height: 22px;
+      padding: 0 5px;
+      font-size: 13px;
+      line-height: 1;
+      background: #1f2636;
+      border: 1px solid #2a3448;
+      color: var(--text);
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s ease, border-color 0.1s ease;
+    }
+    .step-btn:hover { background: #2a3448; border-color: #4aa3ff; }
+    .step-btn:active { transform: translateY(1px); }
     .controls {
       background: var(--panel);
       border: 1px solid #1f2636;
@@ -224,6 +254,7 @@
       gap: 4px;
       font-size: 11px;
       color: var(--muted);
+      margin-left: auto;
     }
     .playback-rate label {
       font-size: 10px;
@@ -236,17 +267,6 @@
       min-width: 32px;
       font-family: ui-monospace, monospace;
       font-size: 11px;
-    }
-    .time-controls {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
-    .time-controls button {
-      font-size: 11px;
-      padding: 4px 8px;
-      min-height: 28px;
     }
 
     .replay-btn {
@@ -364,14 +384,6 @@
       }
       .playback-rate input[type="range"] {
         width: 60px;
-      }
-      .time-controls {
-        gap: 3px;
-      }
-      .time-controls button {
-        font-size: 10px;
-        padding: 3px 6px;
-        min-height: 26px;
       }
       .replay-btn {
         font-size: 10px;
@@ -533,6 +545,96 @@
     .tour-highlight {
       transition: box-shadow 0.2s ease;
     }
+
+    /* ====================== 3D split-screen view ====================== */
+    .viz-split {
+      display: grid;
+      grid-template-columns: 1fr;
+      width: 100%;
+      gap: 8px;
+    }
+    .viz-split.split { grid-template-columns: 1fr 1fr; }
+    .viz-split.split.narrow { grid-template-columns: 1fr; grid-template-rows: auto auto; }
+    .viz-pane {
+      position: relative;
+      overflow: hidden;
+      border-radius: 10px;
+      background: #05070f;
+      border: 1px solid #1f2636;
+      min-height: 0;
+      min-width: 0;
+    }
+    /* canvases fill their pane; drawing buffer is set in JS */
+    .viz-pane canvas {
+      position: absolute !important;
+      inset: 0;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      display: block;
+      outline: none;
+    }
+    #viz-pane-3d { display: none; }
+    .viz-split.split #viz-pane-3d { display: block; }
+
+    .v3d-label {
+      position: absolute;
+      pointer-events: none;
+      user-select: none;
+      font-size: 10.5px;
+      color: #9fe8ff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.75);
+      white-space: nowrap;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* Overlay buttons on the 2D view: 3D toggle (top-left), info (i) (top-right) */
+    .viz-mini-toggle, .viz-info {
+      position: absolute;
+      top: 8px;
+      z-index: 6;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(18, 24, 38, 0.72);
+      border: 1px solid #2a3448;
+      color: #a3adbf;
+      border-radius: 8px;
+      cursor: pointer;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+    }
+    .viz-mini-toggle { left: 8px; height: 30px; min-width: 30px; padding: 0 9px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+    .viz-info { right: 8px; width: 30px; height: 30px; padding: 0; }
+    .viz-mini-toggle:hover, .viz-info:hover { background: rgba(31, 38, 54, 0.92); color: #e6e9f0; border-color: #4aa3ff; }
+    .viz-mini-toggle:active, .viz-info:active { transform: translateY(1px); }
+    .viz-mini-toggle:focus-visible, .viz-info:focus-visible { outline: 2px solid #4aa3ff; outline-offset: 2px; }
+    .viz-mini-toggle.active { background: var(--accent); border-color: #2f6cb8; color: #fff; }
+    .viz-info svg { display: block; }
+
+    .viz-popover {
+      position: absolute;
+      top: 44px;
+      right: 8px;
+      z-index: 7;
+      width: min(260px, calc(100% - 16px));
+      background: rgba(18, 24, 38, 0.97);
+      border: 1px solid #2a3448;
+      border-radius: 10px;
+      padding: 11px 13px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+      color: #c9d2e3;
+      font-size: 11.5px;
+      line-height: 1.45;
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+    .viz-popover[hidden] { display: none; }
+    .viz-popover h4 { margin: 0 0 6px; font-size: 12px; color: #e6e9f0; font-weight: 600; }
+    .viz-popover p { margin: 0 0 6px; }
+    .viz-popover p:last-child { margin-bottom: 0; }
+    .viz-popover .kbd { font-family: ui-monospace, Menlo, monospace; background: #0a0e17; border: 1px solid #2a3448; border-radius: 4px; padding: 0 4px; font-size: 10.5px; color: #cfe3ff; }
   </style>
 </head>
 <body>
@@ -555,8 +657,34 @@
       <!-- Visualization -->
       <div>
         <div class="viz-container" id="viz-wrap">
-          <canvas id="viz"></canvas>
-          <!-- World labels (small, inside viz) -->
+          <div class="viz-split" id="viz-split">
+            <div class="viz-pane" id="viz-pane-2d">
+              <canvas id="viz"></canvas>
+              <button id="btn-3d" class="viz-mini-toggle" type="button" aria-pressed="false"
+                title="Toggle 3D Earth view (key: 3)" aria-label="Toggle 3D Earth view">3D</button>
+              <button id="btn-3d-info" class="viz-info" type="button"
+                title="What am I looking at?" aria-label="About this view" aria-expanded="false">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 16v-4"></path>
+                  <path d="M12 8h.01"></path>
+                </svg>
+              </button>
+              <div id="viz-popover" class="viz-popover" hidden role="dialog" aria-label="About this view">
+                <h4>3D Earth view</h4>
+                <p>A first-person view from an observer on Earth &mdash; you see only the light-delayed &ldquo;ghost ship&rdquo;, never its true location.</p>
+                <p>Because light travels at finite speed, the ship appears at its <strong>retarded</strong> position: where it was when the light you see now left it. Its real position stays invisible; that light hasn&rsquo;t arrived yet.</p>
+                <p>Toggle it with the <strong>3D</strong> button (top-left) or the <span class="kbd">3</span> key.</p>
+              </div>
+            </div>
+            <div class="viz-pane" id="viz-pane-3d">
+              <canvas id="viz3d"></canvas>
+              <div class="v3d-label" id="v3d-ship"></div>
+              <div class="v3d-label" id="v3d-ast" style="color:#f0c98f;"></div>
+            </div>
+          </div>
+          <!-- World labels (small, inside viz, positioned relative to viz-wrap) -->
           <div id="label-earth" style="position:absolute; font-size:10px; color:#7fa8e0; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Earth</div>
           <div id="label-asteroid" style="position:absolute; font-size:10px; color:#b89d7a; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Asteroid</div>
         </div>
@@ -572,9 +700,13 @@
               </svg>
               <span>Earth Observer</span>
             </div>
-            <div class="clock-row">
+            <div class="clock-row clock-local">
               <div class="clock-label">Earth time (local)</div>
-              <div class="clock-value"><span id="earth-local">0.00</span> <span class="unit">y</span></div>
+              <div class="stepper">
+                <button id="step-earth-minus" class="step-btn" type="button" aria-label="Subtract 1 Earth year">&#x2212;</button>
+                <span class="step-val"><span id="earth-local">0.00</span><span class="unit">y</span></span>
+                <button id="step-earth-plus" class="step-btn" type="button" aria-label="Add 1 Earth year">+</button>
+              </div>
             </div>
             <div class="clock-row">
               <div class="clock-label">Ship time (observed)</div>
@@ -593,26 +725,19 @@
               </svg>
               <span>Spaceship Observer</span>
             </div>
-            <div class="clock-row">
+            <div class="clock-row clock-local">
               <div class="clock-label">Ship time (local)</div>
-              <div class="clock-value"><span id="ship-local">0.00</span> <span class="unit">y</span></div>
+              <div class="stepper">
+                <button id="step-ship-minus" class="step-btn" type="button" aria-label="Subtract 1 Ship year">&#x2212;</button>
+                <span class="step-val"><span id="ship-local">0.00</span><span class="unit">y</span></span>
+                <button id="step-ship-plus" class="step-btn" type="button" aria-label="Add 1 Ship year">+</button>
+              </div>
             </div>
             <div class="clock-row">
               <div class="clock-label">Earth time (observed)</div>
               <div class="clock-value"><span id="ship-earth">0.00</span> <span class="unit">y</span></div>
             </div>
           </div>
-        </div>
-
-        <div class="legend" style="margin-top:8px; margin-left:4px;">
-          <div class="legend-item"><div class="legend-dot outbound"></div> Outbound</div>
-          <div class="legend-item"><div class="legend-dot return"></div> Return</div>
-          <div class="legend-item" style="margin-left:10px;">
-            <span style="display:inline-block;width:10px;height:10px;background:#6b7a8a;opacity:0.55;border-radius:2px;margin-right:4px;"></span>
-            <span style="color:#8a93a8;">Observed from Earth</span>
-          </div>
-          <div style="flex:1"></div>
-          <div class="note">Click route to place ship • Click Earth for start/end • Click Asteroid for turnaround. Faint = light-delayed view from Earth.</div>
         </div>
       </div>
 
@@ -652,20 +777,13 @@
           </div>
         </div>
 
-        <div class="time-controls">
-          <button id="btn-e-minus" title="Subtract 1 Earth year (local)">🌍 -1 year</button>
-          <button id="btn-e-plus" title="Add 1 Earth year (local)">🌍 +1 year</button>
-          <button id="btn-s-minus" title="Subtract 1 Ship year (local)">🚀 -1 year</button>
-          <button id="btn-s-plus" title="Add 1 Ship year (local)">🚀 +1 year</button>
-        </div>
+        <button id="replay-tour" class="replay-btn" title="Show the guided tour again">Replay guided tour</button>
 
         <div class="note">
           The four clocks show proper times and <strong>light-signal observations</strong> (signals travel at c).<br>
-          "Earth time (local)" is Earth's coordinate time t simultaneous with the ship's true position.<br>
-          "Ship time (observed)" from Earth is the ship's proper time at the retarded (light-delayed) position.
+          &ldquo;Earth time (local)&rdquo; is Earth&rsquo;s coordinate time t simultaneous with the ship&rsquo;s true position.<br>
+          &ldquo;Ship time (observed)&rdquo; from Earth is the ship&rsquo;s proper time at the retarded (light-delayed) position.
         </div>
-
-        <button id="replay-tour" class="replay-btn" title="Show the guided tour again">Replay guided tour</button>
       </div>
     </div>
   </div>
@@ -1048,6 +1166,13 @@
     // Three objects refs for updates
     let routeOut, routeIn; // meshes
 
+    // ---- 3D first-person (Earth observer) view ----
+    let renderer3d, scene3d, camera3d;
+    let earthSphere3d, earthSpin3d, asteroid3d, asteroidSpin3d, ghostShip3d, ghostGlow3d, starfield3d;
+    let view3DEnabled = false;
+    const FAR3D = 70;            // schematic distance (scene units) to the asteroid in the 3D view
+    const SHIP_Y3D = 1.5;        // elevation of the ship's line of flight above Earth's horizon
+
     function initThree() {
       renderer = new THREE.WebGLRenderer({
         canvas,
@@ -1178,17 +1303,8 @@
     }
 
     function forceInitialLayout() {
-      // Make size match container early
-      const rect = wrap.getBoundingClientRect();
-      const available = Math.min(rect.width || 360, window.innerWidth - 16 || 360);
-      width = Math.max(260, Math.floor(available));
-      let aspect = 0.55;
-      if (width < 400) aspect = 0.65;
-      height = Math.max(150, Math.floor(width * aspect));
-      canvas.width = width;
-      canvas.height = height;
-      if (renderer) renderer.setSize(width, height);
-      updateCameraAndRoutes();
+      // Make size match container early (handles 2D + optional 3D split)
+      relayoutViz();
     }
 
     function updateCameraAndRoutes() {
@@ -1278,6 +1394,9 @@
         halo.scale.set(sdir, 1, 1);
         halo.rotation.z = 0;
       }
+
+      // Sync the 3D first-person view (ghost ship only, at retarded position)
+      placeShip3D(state);
     }
 
     function updateClocks(state) {
@@ -1333,6 +1452,9 @@
     function render() {
       if (renderer && scene && camera) {
         renderer.render(scene, camera);
+      }
+      if (view3DEnabled && renderer3d && scene3d && camera3d) {
+        renderer3d.render(scene3d, camera3d);
       }
     }
 
@@ -1584,14 +1706,14 @@
       });
 
       // Time step buttons (local times)
-      const btnEMinus = document.getElementById('btn-e-minus');
-      const btnEPlus = document.getElementById('btn-e-plus');
-      const btnSMinus = document.getElementById('btn-s-minus');
-      const btnSPlus = document.getElementById('btn-s-plus');
-      if (btnEMinus) btnEMinus.addEventListener('click', () => stepEarthYears(-1));
-      if (btnEPlus) btnEPlus.addEventListener('click', () => stepEarthYears(1));
-      if (btnSMinus) btnSMinus.addEventListener('click', () => stepShipYears(-1));
-      if (btnSPlus) btnSPlus.addEventListener('click', () => stepShipYears(1));
+      const stepEarthMinus = document.getElementById('step-earth-minus');
+      const stepEarthPlus = document.getElementById('step-earth-plus');
+      const stepShipMinus = document.getElementById('step-ship-minus');
+      const stepShipPlus = document.getElementById('step-ship-plus');
+      if (stepEarthMinus) stepEarthMinus.addEventListener('click', () => stepEarthYears(-1));
+      if (stepEarthPlus) stepEarthPlus.addEventListener('click', () => stepEarthYears(1));
+      if (stepShipMinus) stepShipMinus.addEventListener('click', () => stepShipYears(-1));
+      if (stepShipPlus) stepShipPlus.addEventListener('click', () => stepShipYears(1));
 
       // Keyboard
       window.addEventListener('keydown', (e) => {
@@ -1611,7 +1733,33 @@
           progress = 0;
           updateAll();
         }
+        if (e.key === '3') {
+          e.preventDefault();
+          setView3D(!view3DEnabled);
+        }
       });
+
+      // 3D view toggle
+      const btn3d = document.getElementById('btn-3d');
+      if (btn3d) btn3d.addEventListener('click', () => setView3D(!view3DEnabled));
+
+      // (i) info popover for the view
+      const infoBtn = document.getElementById('btn-3d-info');
+      const popover = document.getElementById('viz-popover');
+      if (infoBtn && popover) {
+        const setPopover = (show) => {
+          if (show) popover.removeAttribute('hidden'); else popover.setAttribute('hidden', '');
+          infoBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
+        };
+        infoBtn.addEventListener('click', (e) => { e.stopPropagation(); setPopover(popover.hasAttribute('hidden')); });
+        document.addEventListener('click', (e) => {
+          if (popover.hasAttribute('hidden')) return;
+          if (!popover.contains(e.target) && !infoBtn.contains(e.target)) setPopover(false);
+        });
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !popover.hasAttribute('hidden')) setPopover(false);
+        });
+      }
 
       // initial sync
       distSlider.value = D;
@@ -1648,27 +1796,8 @@
 
     // ============ Resize ============
     function resizeCanvas() {
-      const rect = wrap.getBoundingClientRect();
-      // Mobile friendly: use actual container width, clamp to viewport
-      const available = Math.min(rect.width, window.innerWidth - 16);
-      width = Math.max(260, Math.floor(available));
-      let aspect = 0.55;
-      if (width < 400) aspect = 0.65; // taller on phones for visibility
-      height = Math.max(150, Math.floor(width * aspect));
-
-      canvas.width = width;
-      canvas.height = height;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-
-      if (renderer) {
-        renderer.setSize(width, height);
-        updateCameraAndRoutes();
-        const state = computeState(D, beta, progress);
-        placeShip(state);
-        updateClocks(state);
-        render();
-      }
+      // Resize both panes (2D always; 3D when enabled)
+      relayoutViz();
     }
 
     // ============ Boot ============
@@ -1742,9 +1871,9 @@
             placement: "right"
           },
           {
-            title: "Time Step Buttons",
-            text: "Use these to add or subtract one year on Earth time or on the ship's own clock. Great for seeing the difference!",
-            target: ".time-controls",
+            title: "Step the Clocks",
+            text: "Use the − and + buttons next to each local clock to step one year at a time on Earth or on the ship. Great for seeing the difference!",
+            target: ".clocks-panel",
             placement: "top"
           },
           {
@@ -1931,6 +2060,358 @@
           startWalkthrough();
         });
       }
+    }
+
+    // ============ 3D first-person view (Earth observer) ============
+    // Unified layout for the 2D viz (and the optional 3D split pane).
+    function relayoutViz() {
+      const wrapW = Math.min(wrap.clientWidth || 360, window.innerWidth - 16);
+      const narrow = wrapW < 640;
+      const split = view3DEnabled;
+
+      // 2D pane width
+      let w2d;
+      if (split && !narrow) w2d = Math.max(220, Math.floor((wrapW - 8) / 2));
+      else w2d = Math.max(260, Math.floor(wrapW));
+      const aspect2d = (w2d < 400) ? 0.65 : 0.55;
+      const h2d = Math.max(160, Math.floor(w2d * aspect2d));
+
+      // 3D pane size
+      let w3d = 0, h3d = 0;
+      if (split) {
+        w3d = narrow ? w2d : Math.max(220, Math.floor((wrapW - 8) / 2));
+        h3d = narrow ? Math.max(190, Math.floor(w3d * 0.62)) : h2d;
+      }
+
+      const splitEl = document.getElementById('viz-split');
+      const pane2d = document.getElementById('viz-pane-2d');
+      const pane3d = document.getElementById('viz-pane-3d');
+      if (splitEl) {
+        splitEl.classList.toggle('split', split);
+        splitEl.classList.toggle('narrow', !!(split && narrow));
+      }
+      if (pane2d) pane2d.style.height = h2d + 'px';
+      if (splitEl) {
+        if (!split) splitEl.style.height = h2d + 'px';
+        else if (narrow) splitEl.style.height = (h2d + 8 + h3d) + 'px';
+        else splitEl.style.height = h2d + 'px';
+      }
+      if (pane3d) pane3d.style.height = split ? (narrow ? h3d + 'px' : h2d + 'px') : '';
+
+      // 2D drawing buffer
+      width = w2d; height = h2d;
+      canvas.width = w2d; canvas.height = h2d;
+      if (renderer) renderer.setSize(w2d, h2d, false);
+
+      // 3D drawing buffer
+      if (split && renderer3d) {
+        const c3 = document.getElementById('viz3d');
+        c3.width = w3d; c3.height = h3d;
+        renderer3d.setSize(w3d, h3d, false);
+        if (camera3d) { camera3d.aspect = w3d / Math.max(1, h3d); camera3d.updateProjectionMatrix(); }
+      }
+
+      updateCameraAndRoutes();
+      const st = computeState(D, beta, progress);
+      placeShip(st);
+      updateClocks(st);
+      render();
+    }
+
+    function setView3D(on) {
+      view3DEnabled = on;
+      const btn = document.getElementById('btn-3d');
+      if (btn) {
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btn.classList.toggle('active', on);
+        btn.title = (on ? 'Hide' : 'Show') + ' 3D Earth view (key: 3)';
+      }
+      if (on && !renderer3d) initThree3D();
+      relayoutViz();
+      if (on) {
+        const st = computeState(D, beta, progress);
+        placeShip3D(st);
+        render();
+      }
+    }
+
+    // ---- procedural assets ----
+    function makeRadialTexture(inner, outer) {
+      const s = 128;
+      const c = makeCanvas(s, s);
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+      g.addColorStop(0, inner);
+      g.addColorStop(1, outer);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, s, s);
+      const t = new THREE.CanvasTexture(c);
+      return t;
+    }
+
+    function createEarthSphereTexture(w = 512, h = 256) {
+      const c = makeCanvas(w, h);
+      const ctx = c.getContext('2d');
+      const og = ctx.createLinearGradient(0, 0, 0, h);
+      og.addColorStop(0, '#0a2a52'); og.addColorStop(0.5, '#114a86'); og.addColorStop(1, '#0a2a52');
+      ctx.fillStyle = og; ctx.fillRect(0, 0, w, h);
+      // continents
+      const land = ['#2f7d3f', '#3c8a48', '#6b7a36'];
+      for (let i = 0; i < 30; i++) {
+        ctx.fillStyle = land[i % land.length];
+        ctx.globalAlpha = 0.8 + Math.random() * 0.2;
+        const cx = Math.random() * w, cy = h * 0.18 + Math.random() * h * 0.64, r = 10 + Math.random() * 42;
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 2; a += 0.45) {
+          const rr = r * (0.55 + Math.random() * 0.7);
+          const px = cx + Math.cos(a) * rr;
+          const py = cy + Math.sin(a) * rr * 0.7;
+          if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      // polar caps
+      ctx.fillStyle = '#e8f2ff';
+      ctx.fillRect(0, 0, w, Math.floor(h * 0.08));
+      ctx.fillRect(0, Math.floor(h * 0.92), w, Math.ceil(h * 0.08));
+      // soft cloud streaks
+      ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 20; i++) {
+        const x = Math.random() * w, y = Math.random() * h, r = 18 + Math.random() * 52;
+        ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function makeStarfield3D() {
+      const N = 1400;
+      const pos = new Float32Array(N * 3);
+      const col = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        const u = Math.random(), v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2 * v - 1);
+        const r = 200 + Math.random() * 200;
+        pos[3 * i]     = r * Math.sin(phi) * Math.cos(theta);
+        pos[3 * i + 1] = r * Math.cos(phi);
+        pos[3 * i + 2] = r * Math.sin(phi) * Math.sin(theta);
+        // stellar color temperature (warm reds <-> cool blues)
+        const temp = Math.random() * 2 - 1;
+        const bright = 0.4 + Math.random() * 0.55;
+        const warm = Math.max(temp, 0), cool = Math.max(-temp, 0);
+        col[3 * i]     = Math.min(1, bright * (0.9 + warm * 0.18));
+        col[3 * i + 1] = Math.min(1, bright * 0.94);
+        col[3 * i + 2] = Math.min(1, bright * (1.0 + cool * 0.2));
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const m = new THREE.PointsMaterial({
+        size: 1.9, sizeAttenuation: true, vertexColors: true,
+        transparent: true, opacity: 1.0, depthWrite: false
+      });
+      return new THREE.Points(g, m);
+    }
+
+    function makeEarth3D() {
+      const grp = new THREE.Group();
+      const R = 3;
+      const tex = createEarthSphereTexture();
+      const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0.02 });
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 32), mat);
+      grp.add(sphere);
+      // atmosphere rim (additive backside shell) — adapted from space-web-game
+      const sunDir = new THREE.Vector3(0.7, 0.6, 0.4).normalize();
+      const atmos = new THREE.Mesh(
+        new THREE.SphereGeometry(R * 1.05, 48, 32),
+        new THREE.ShaderMaterial({
+          blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, side: THREE.BackSide,
+          uniforms: { uSunDir: { value: sunDir } },
+          vertexShader: [
+            'varying vec3 vN; varying vec3 vV; varying vec3 vWN;',
+            'void main(){ vN = normalize(normalMatrix * normal); vWN = normalize(mat3(modelMatrix) * normal);',
+            'vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }'
+          ].join('\n'),
+          fragmentShader: [
+            'varying vec3 vN; varying vec3 vV; varying vec3 vWN; uniform vec3 uSunDir;',
+            'void main(){ vec3 n = normalize(vN); vec3 vd = normalize(vV);',
+            'float limb = 1.0 - abs(dot(n, vd));',
+            'float edge = pow(smoothstep(0.42, 1.0, limb), 2.2);',
+            'float sun = smoothstep(-0.22, 0.68, dot(normalize(vWN), normalize(uSunDir)));',
+            'float a = edge * mix(0.16, 0.44, sun);',
+            'vec3 col = mix(vec3(0.12, 0.34, 0.72), vec3(0.93, 0.98, 1.0), max(edge * 0.78, sun));',
+            'gl_FragColor = vec4(col * a, a); }'
+          ].join('\n')
+        })
+      );
+      grp.add(atmos);
+      grp.userData.sphere = sphere;
+      return grp;
+    }
+
+    function makeAsteroidBeacon3D() {
+      const grp = new THREE.Group();
+      const rock = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(1.3, 1),
+        new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.95, metalness: 0.0, flatShading: true })
+      );
+      grp.add(rock);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: makeRadialTexture('#ffd9a0', 'rgba(255,176,102,0)'),
+        color: 0xffb066, transparent: true, opacity: 0.7,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      glow.scale.set(15, 15, 1);
+      grp.add(glow);
+      grp.userData.rock = rock;
+      return grp;
+    }
+
+    function makeGhostShip3D() {
+      const grp = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0xbdf0ff, emissive: 0x2a8fbf, emissiveIntensity: 0.75,
+        roughness: 0.4, metalness: 0.3, transparent: true, opacity: 0.92
+      });
+      // nose cone (points +x)
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.9, 16), bodyMat);
+      cone.rotation.z = -Math.PI / 2;
+      grp.add(cone);
+      // body
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.55, 16), bodyMat);
+      cyl.rotation.z = -Math.PI / 2; cyl.position.x = -0.62;
+      grp.add(cyl);
+      // fins
+      const finMat = new THREE.MeshStandardMaterial({
+        color: 0x7edcff, emissive: 0x1e5f80, emissiveIntensity: 0.5,
+        transparent: true, opacity: 0.85
+      });
+      for (const s of [-1, 1]) {
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.02, 0.3), finMat);
+        fin.position.set(-0.5, 0, s * 0.22);
+        grp.add(fin);
+      }
+      // engine glow at tail (-x)
+      const eng = new THREE.Mesh(
+        new THREE.SphereGeometry(0.13, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.9 })
+      );
+      eng.position.x = -0.92; grp.add(eng);
+      grp.userData.engine = eng;
+
+      // visibility halo (separate sprite, added to scene so it can pulse)
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: makeRadialTexture('#d6f5ff', 'rgba(126,220,255,0)'),
+        color: 0x9fe8ff, transparent: true, opacity: 0.5,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      glow.scale.set(4.2, 4.2, 1);
+      return { ship: grp, glow };
+    }
+
+    function initThree3D() {
+      if (renderer3d) return;
+      const canvas3d = document.getElementById('viz3d');
+      renderer3d = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+      renderer3d.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+      scene3d = new THREE.Scene();
+      scene3d.background = new THREE.Color(0x05070f);
+      // NOTE: no fog — a distance fog would erase the starfield (stars sit on a far shell).
+
+      camera3d = new THREE.PerspectiveCamera(58, 1, 0.1, 900);
+      // Observer grazing Earth's surface (Earth center at (0,-3,0), R=3): horizon fills the
+      // lower portion; ship + asteroid fly above it into the starfield.
+      camera3d.position.set(0.0, 0.08, 0.4);
+      camera3d.lookAt(FAR3D * 0.42, 0.55, 0);
+
+      // lighting — sun illuminates the Earth face the observer looks out from (toward the ship)
+      scene3d.add(new THREE.AmbientLight(0x223044, 0.95));
+      const sun = new THREE.DirectionalLight(0xfff2d8, 1.2);
+      sun.position.set(0.7, 0.6, 0.4).normalize().multiplyScalar(100);
+      scene3d.add(sun);
+
+      // starfield
+      starfield3d = makeStarfield3D();
+      scene3d.add(starfield3d);
+
+      // Earth (observer's planet) — surface sits below the horizon
+      earthSphere3d = makeEarth3D();
+      earthSphere3d.position.set(0, -3.0, 0);
+      earthSpin3d = earthSphere3d.userData.sphere;
+      scene3d.add(earthSphere3d);
+
+      // destination asteroid beacon far along +x
+      asteroid3d = makeAsteroidBeacon3D();
+      asteroid3d.position.set(FAR3D, SHIP_Y3D, 0);
+      asteroidSpin3d = asteroid3d.userData.rock;
+      scene3d.add(asteroid3d);
+
+      // ghost ship (apparent / retarded position only)
+      const g = makeGhostShip3D();
+      ghostShip3d = g.ship; ghostGlow3d = g.glow;
+      scene3d.add(ghostShip3d);
+      scene3d.add(ghostGlow3d);
+    }
+
+    function project3DToPane(vec) {
+      if (!camera3d) return null;
+      const v = vec.clone().project(camera3d);
+      const pane = document.getElementById('viz-pane-3d');
+      if (!pane) return null;
+      const rect = pane.getBoundingClientRect();
+      return {
+        x: (v.x * 0.5 + 0.5) * rect.width,
+        y: (-v.y * 0.5 + 0.5) * rect.height,
+        onScreen: v.z > -1 && v.z < 1 && v.x >= -1 && v.x <= 1 && v.y >= -1 && v.y <= 1
+      };
+    }
+
+    function update3DOverlay(obs, state) {
+      const shipLbl = document.getElementById('v3d-ship');
+      const astLbl = document.getElementById('v3d-ast');
+      if (shipLbl && ghostShip3d) {
+        const p = project3DToPane(ghostShip3d.position);
+        if (p && p.onScreen) {
+          shipLbl.style.display = '';
+          shipLbl.style.left = Math.min(p.x + 12, (document.getElementById('viz-pane-3d').clientWidth - 120)) + 'px';
+          shipLbl.style.top = Math.max(4, p.y - 8) + 'px';
+          shipLbl.textContent = 'ghost ship · apparent ' + obs.x.toFixed(2) + ' ly (true ' + state.x.toFixed(2) + ')';
+        } else {
+          shipLbl.style.display = 'none';
+        }
+      }
+      if (astLbl) {
+        const p2 = project3DToPane(new THREE.Vector3(FAR3D, SHIP_Y3D, 0));
+        if (p2 && p2.onScreen) {
+          astLbl.style.display = '';
+          astLbl.style.left = Math.min(p2.x + 10, (document.getElementById('viz-pane-3d').clientWidth - 110)) + 'px';
+          astLbl.style.top = Math.max(18, p2.y - 22) + 'px';
+          astLbl.textContent = 'asteroid · ' + D.toFixed(1) + ' ly';
+        } else {
+          astLbl.style.display = 'none';
+        }
+      }
+    }
+
+    function placeShip3D(state) {
+      if (!view3DEnabled || !ghostShip3d) return;
+      const obs = getObservedPositionFromEarth(D, beta, state.t);
+      const frac = D > 1e-9 ? Math.max(0, Math.min(1, obs.x / D)) : 0;
+      const xPos = frac * FAR3D;
+      ghostShip3d.position.set(xPos, SHIP_Y3D, 0);
+      ghostShip3d.rotation.y = (obs.leg === 'out') ? 0 : Math.PI; // point along travel direction
+      ghostGlow3d.position.copy(ghostShip3d.position);
+      // gentle pulse + slow spin for life
+      const tt = performance.now() * 0.003;
+      if (ghostGlow3d.material) ghostGlow3d.material.opacity = 0.42 + 0.16 * (0.5 + 0.5 * Math.sin(tt));
+      if (earthSpin3d) earthSpin3d.rotation.y += 0.0006;
+      if (asteroidSpin3d) asteroidSpin3d.rotation.x += 0.0015;
+      update3DOverlay(obs, state);
     }
 
     init();
