@@ -206,6 +206,14 @@
       align-items: center;
       gap: 8px;
     }
+    label.opt {
+      min-width: 0; display: inline-flex; align-items: center; gap: 6px;
+      cursor: pointer; color: var(--muted); font-size: 12px;
+    }
+    label.opt input { accent-color: var(--accent); }
+    label.opt.opt-disabled, label.opt:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+    .opt-label { min-width: 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+    .opt-note { font-size: 11px; opacity: 0.62; line-height: 1.45; }
     label {
       font-size: 12px;
       color: var(--muted);
@@ -675,6 +683,8 @@
                 <h4>3D Earth view</h4>
                 <p>A first-person view from an observer on Earth &mdash; you see only the light-delayed &ldquo;ghost ship&rdquo;, never its true location.</p>
                 <p>Because light travels at finite speed, the ship appears at its <strong>retarded</strong> position: where it was when the light you see now left it. Its real position stays invisible; that light hasn&rsquo;t arrived yet.</p>
+                <p>The ghost ship is the <strong>same ship</strong> you see in the 2D map (same color, same shape); what changes is the light reaching Earth. Its light is <strong>Doppler-shifted</strong> across the spectrum: receding, it stretches toward infrared so the ship dims toward black; approaching, a red ship&rsquo;s hue rotates through orange, yellow, green, blue and (at the highest speeds) wraps back toward magenta. <em>Nothing is clamped</em> &mdash; at extreme speed the ship really does collapse to a near-invisible sliver or blaze out, exactly as the physics dictates.</p>
+                <p>Its shape uses the <strong>Terrell&ndash;Penrose</strong> photographed length by default (uncheck for textbook Lorentz contraction 1/&gamma;): the approaching ship looks stretched and the receding ship more squashed, because the camera gathers light that left the ship&rsquo;s front and back at different times. This distortion is shown assuming the observer is <strong>on Earth</strong>; the observer-position switch (sidebar) previews a future midpoint observer, which would change the geometry for both the 2D map and this 3D view.</p>
                 <p>Toggle it with the <strong>3D</strong> button (top-left) or the <span class="kbd">3</span> key.</p>
               </div>
             </div>
@@ -757,6 +767,17 @@
             <input type="range" id="speed-slider" min="0.1" max="0.995" step="0.005" value="0.9">
             <input type="number" id="speed-num" min="0.05" max="0.999" step="0.001" value="0.9">
           </div>
+          <label class="opt" title="Off: textbook Lorentz contraction (1/γ). On: the photographed Terrell-Penrose shape, where the approaching ship looks stretched and the receding ship more squashed.">
+            <input type="checkbox" id="terrell-toggle" checked> Terrell&ndash;Penrose shape
+            <span style="opacity:0.6;font-size:11px">(photographed, not measured)</span>
+          </label>
+        </div>
+
+        <div class="control-group" aria-label="Observer position">
+          <div class="opt-label">Observer position</div>
+          <label class="opt"><input type="radio" name="observer-pos" value="earth" checked disabled> On Earth</label>
+          <label class="opt opt-disabled"><input type="radio" name="observer-pos" value="mid" disabled> Equidistant from Earth &amp; asteroid <span class="opt-note" style="display:inline">(coming soon)</span></label>
+          <div class="opt-note">The ghost ship&rsquo;s Terrell&ndash;Penrose distortion in the 2D map assumes the observer is on Earth. A midpoint observer would change the geometry for both views.</div>
         </div>
 
         <div class="info">
@@ -782,7 +803,8 @@
         <div class="note">
           The four clocks show proper times and <strong>light-signal observations</strong> (signals travel at c).<br>
           &ldquo;Earth time (local)&rdquo; is Earth&rsquo;s coordinate time t simultaneous with the ship&rsquo;s true position.<br>
-          &ldquo;Ship time (observed)&rdquo; from Earth is the ship&rsquo;s proper time at the retarded (light-delayed) position.
+          &ldquo;Ship time (observed)&rdquo; from Earth is the ship&rsquo;s proper time at the retarded (light-delayed) position.<br>
+          The ghost ship is the same ship as the real one. Its light is Doppler-shifted (dims toward black while receding; runs red&rsaquo;orange&rsaquo;green&rsaquo;blue while approaching) and its shape uses the <strong>Terrell&ndash;Penrose</strong> photographed length by default (uncheck for textbook Lorentz 1/&gamma;), assuming the observer is <strong>on Earth</strong>. Nothing is clamped &mdash; at high speed it can shrink to a sliver or blaze out white.
         </div>
       </div>
     </div>
@@ -793,6 +815,73 @@
     // ============ Physics ============
     function computeGamma(beta) {
       return 1 / Math.sqrt(Math.max(1e-12, 1 - beta * beta));
+    }
+
+    // Relativistic visual effects applied to the OBSERVED ghost ship:
+    //  - Lorentz contraction along the direction of motion (textbook 1/gamma)
+    //  - relativistic Doppler color shift, modeled as a spectral hue rotation on the
+    //    ship's true colors. Receding: light stretches toward infrared, so the ship
+    //    dims and deepens to a dark crimson (hue unchanged, lightness drops).
+    //    Approaching: light compresses, so a red ship's hue rotates through
+    //    orange -> yellow -> green -> blue as beta grows (physically correct for a
+    //    red-painted reflector). Capped before wrapping back to magenta.
+    //  - relativistic beaming (apparent brightness ~ f^~2.5).
+    // `receding` = the ship is moving away from the observer at the retarded event
+    // (the outbound leg). Values are clamped so the ship stays visible at extreme beta.
+    function relativisticVisuals(beta, receding, terrell) {
+      const b = Math.max(0, Math.min(0.9995, beta));
+      const f = receding
+        ? Math.sqrt((1 - b) / (1 + b))    // observed/emitted frequency  (<1 => redder/dimmer)
+        : Math.sqrt((1 + b) / (1 - b));   // (>1 => bluer/brighter)
+      const gamma = 1 / Math.sqrt(Math.max(1e-12, 1 - b * b));
+      // Apparent length of the ghost ship along its motion:
+      //  - Lorentz: 1/gamma, the textbook contraction measured in the observer frame.
+      //  - Terrell-Penrose (toggle): the *photographed* length = the Doppler factor f,
+      //    which stretches the ship when approaching (f>1) and squeezes it when receding.
+      // UNCLAMPED on purpose — at extreme beta this collapses toward 0 or explodes (the
+      // point: see how crazy real relativistic geometry gets).
+      const contraction = terrell ? f : 1 / gamma;
+      // hue rotation in degrees: receding stays red (dims only); approaching rotates the
+      // spectrum. log2(f) maps beta to hue, UNCAPPED — at very high beta it wraps past
+      // blue into violet/magenta and back toward red.
+      let hueDeg;
+      if (receding) {
+        hueDeg = 0;
+      } else {
+        hueDeg = Math.log(f) / Math.log(2) * 100;
+      }
+      const hueRad = hueDeg * Math.PI / 180;
+      // brightness multiplier, UNCLAMPED: receding dims toward black (light ->IR),
+      // approaching brightens without bound (beaming). Final HSL/HSV components are still
+      // bounded to [0,1] because that is the valid range for a representable color.
+      const light = Math.pow(f, 2.5);
+      const label = (receding ? 'redshift' : 'blueshift') + ' \u00d7' + f.toFixed(2);
+      return { contraction, hueRad, hueDeg, light, f, label, receding };
+    }
+
+    // Shared scratch + helpers to apply the Doppler hue rotation to material colors.
+    const _hslTmp = { h: 0, s: 0, l: 0 };
+    function applyShift(mat, base, rv, baseEmis, emisI) {
+      if (!mat) return;
+      const hueAdd = rv.hueRad / (2 * Math.PI);
+      // Final lightness bounded to [0,1] (valid HSL range) but otherwise unclamped, so a
+      // strongly approaching ship washes toward white and a receding one toward black.
+      const L = (l) => Math.max(0, Math.min(1, l * rv.light));
+      base.getHSL(_hslTmp);
+      mat.color.setHSL((_hslTmp.h + hueAdd) % 1, _hslTmp.s, L(_hslTmp.l));
+      if (baseEmis && mat.emissive) {
+        baseEmis.getHSL(_hslTmp);
+        mat.emissive.setHSL((_hslTmp.h + hueAdd) % 1, _hslTmp.s, L(_hslTmp.l));
+      }
+      if (emisI != null && mat.emissiveIntensity != null) mat.emissiveIntensity = emisI * rv.light;
+    }
+    // representative observed color of the (red) ship under the Doppler shift, for glows
+    function shiftedRedColor(rv) {
+      const c = new THREE.Color(0xff4d4d);
+      const hueAdd = rv.hueRad / (2 * Math.PI);
+      c.getHSL(_hslTmp);
+      c.setHSL((_hslTmp.h + hueAdd) % 1, _hslTmp.s, Math.max(0, Math.min(1, _hslTmp.l * rv.light)));
+      return c;
     }
 
     function computeState(D, beta, progress) {
@@ -1162,6 +1251,7 @@
     let playing = false;
     let lastRafTime = 0;
     let playbackRate = 1.0; // animation speed multiplier
+    let terrellEnabled = true; // Terrell-Penrose photographed shape vs Lorentz contraction (default on)
 
     // Three objects refs for updates
     let routeOut, routeIn; // meshes
@@ -1268,20 +1358,73 @@
       shipMesh = shipPlane;
       scene.add(shipMesh);
 
-      // Shadow spacecraft (observed from Earth) - cartoon ghost texture, highly visible
-      ghostTexture = createShipTexture(256, true);
-      ghostTexture.magFilter = THREE.LinearFilter;
+      // Shadow spacecraft (observed from Earth). It is the SAME ship as shipMesh —
+      // same red texture — so at low beta it looks identical to the true ship. The
+      // Doppler shift is applied as a hue rotation + brightness via a shader; a soft
+      // glow halo behind it carries the shifted color.
+      ghostTexture = shipTexture;  // reuse the true ship's texture (same ship, observed)
+      const GHOST_VERT = [
+        'varying vec2 vUv;',
+        'void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }'
+      ].join('\n');
+      const GHOST_FRAG = [
+        'precision mediump float;',
+        'uniform sampler2D u_map;',
+        'uniform float u_hue;   // radians added to hue',
+        'uniform float u_light; // value multiplier',
+        'uniform float u_opacity;',
+        'varying vec2 vUv;',
+        // rgb->hsv (Sam Hocevar) then back, to rotate hue per pixel
+        'vec3 rgb2hsv(vec3 c){',
+        '  vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0);',
+        '  vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));',
+        '  vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));',
+        '  float d = q.x - min(q.w, q.y);',
+        '  float e = 1.0e-10;',
+        '  return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);',
+        '}',
+        'vec3 hsv2rgb(vec3 c){',
+        '  vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);',
+        '  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - 3.0);',
+        '  return c.z * mix(K.www, clamp(p - 1.0, 0.0, 1.0), c.y);',
+        '}',
+        'void main(){',
+        '  vec4 t = texture2D(u_map, vUv);',
+        '  vec3 hsv = rgb2hsv(t.rgb);',
+        '  hsv.x = fract(hsv.x + u_hue / 6.2831853);',
+        '  hsv.z = clamp(hsv.z * u_light, 0.0, 1.0);',
+        '  gl_FragColor = vec4(hsv2rgb(hsv), t.a * u_opacity);',
+        '}'
+      ].join('\n');
+      const ghostMat = new THREE.ShaderMaterial({
+        uniforms: {
+          u_map:     { value: ghostTexture },
+          u_hue:     { value: 0 },
+          u_light:   { value: 1 },
+          u_opacity: { value: 0.92 }
+        },
+        vertexShader: GHOST_VERT,
+        fragmentShader: GHOST_FRAG,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
       const ghostPlane = new THREE.Mesh(
         new THREE.PlaneGeometry(1.48, 0.85),  // slightly larger than main
-        new THREE.MeshBasicMaterial({ map: ghostTexture, transparent: true, opacity: 0.92, side: THREE.DoubleSide })
+        ghostMat
       );
       shadowShipMesh = ghostPlane;
+      shadowShipMesh.userData.ghostMat = ghostMat;
       scene.add(shadowShipMesh);
 
-      // Extra soft glow halo for the shadow (makes it pop nicely)
+      // Soft glow halo behind the ghost, tinted to the Doppler-shifted color.
       const halo = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.82, 1.05),
-        new THREE.MeshBasicMaterial({ map: ghostTexture, transparent: true, opacity: 0.22, side: THREE.DoubleSide })
+        new THREE.PlaneGeometry(2.6, 1.5),
+        new THREE.MeshBasicMaterial({
+          map: makeRadialTexture('rgba(255,255,255,1)', 'rgba(255,255,255,0)'),
+          transparent: true, opacity: 0.30, side: THREE.DoubleSide, depthWrite: false,
+          blending: THREE.AdditiveBlending
+        })
       );
       shadowShipMesh.userData.halo = halo;
       scene.add(halo);
@@ -1384,15 +1527,28 @@
       const sy = (obs.leg === 'out') ? routeOutY : routeInY;
       shadowShipMesh.position.set(obs.x, sy, 0.01);
       const sdir = (obs.leg === 'out') ? 1 : -1;
-      shadowShipMesh.scale.set(sdir, 1, 1);
+      // Relativistic visuals on the observed ghost: Lorentz contraction along motion
+      // + Doppler color tint (red when receding, blue when approaching) + beaming.
+      const rv = relativisticVisuals(beta, obs.leg === 'out', terrellEnabled);
+      shadowShipMesh.scale.set(sdir * rv.contraction, 1, 1);
       shadowShipMesh.rotation.z = 0;
+      const gmat = shadowShipMesh.userData && shadowShipMesh.userData.ghostMat;
+      if (gmat) {
+        gmat.uniforms.u_hue.value = rv.hueRad;
+        gmat.uniforms.u_light.value = rv.light;
+        gmat.uniforms.u_opacity.value = 0.92;
+      }
 
-      // Halo follows the shadow
+      // Halo glow follows the shadow, tinted to the Doppler-shifted color
       const halo = shadowShipMesh.userData && shadowShipMesh.userData.halo;
       if (halo) {
         halo.position.set(obs.x, sy, 0.005);
-        halo.scale.set(sdir, 1, 1);
+        halo.scale.set(1, 1, 1);   // soft symmetric glow (mirroring is irrelevant)
         halo.rotation.z = 0;
+        if (halo.material) {
+          halo.material.color.copy(shiftedRedColor(rv));
+          halo.material.opacity = 0.30 * rv.light;
+        }
       }
 
       // Sync the 3D first-person view (ghost ship only, at retarded position)
@@ -1652,6 +1808,7 @@
       const distNum = document.getElementById('dist-num');
       const speedSlider = document.getElementById('speed-slider');
       const speedNum = document.getElementById('speed-num');
+      const terrellToggle = document.getElementById('terrell-toggle');
 
       function applyDist(val) {
         D = Math.max(1, Math.min(100, parseFloat(val) || 10));
@@ -1661,6 +1818,12 @@
       function applySpeed(val) {
         beta = Math.max(0.05, Math.min(0.999, parseFloat(val) || 0.9));
         updateAll();
+      }
+      if (terrellToggle) {
+        terrellToggle.addEventListener('change', () => {
+          terrellEnabled = terrellToggle.checked;
+          updateAll();
+        });
       }
 
       distSlider.addEventListener('input', () => {
@@ -2274,7 +2437,7 @@
     function makeGhostShip3D() {
       const grp = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({
-        color: 0xbdf0ff, emissive: 0x2a8fbf, emissiveIntensity: 0.75,
+        color: 0xff4d4d, emissive: 0x7a1a1a, emissiveIntensity: 0.6,
         roughness: 0.4, metalness: 0.3, transparent: true, opacity: 0.92
       });
       // nose cone (points +x)
@@ -2287,7 +2450,7 @@
       grp.add(cyl);
       // fins
       const finMat = new THREE.MeshStandardMaterial({
-        color: 0x7edcff, emissive: 0x1e5f80, emissiveIntensity: 0.5,
+        color: 0x2e5aa8, emissive: 0x162a4a, emissiveIntensity: 0.45,
         transparent: true, opacity: 0.85
       });
       for (const s of [-1, 1]) {
@@ -2298,18 +2461,31 @@
       // engine glow at tail (-x)
       const eng = new THREE.Mesh(
         new THREE.SphereGeometry(0.13, 12, 12),
-        new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.9 })
+        new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.9 })
       );
       eng.position.x = -0.92; grp.add(eng);
       grp.userData.engine = eng;
 
       // visibility halo (separate sprite, added to scene so it can pulse)
       const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: makeRadialTexture('#d6f5ff', 'rgba(126,220,255,0)'),
-        color: 0x9fe8ff, transparent: true, opacity: 0.5,
+        map: makeRadialTexture('#ffd9a0', 'rgba(255,176,102,0)'),
+        color: 0xffd9a0, transparent: true, opacity: 0.5,
         blending: THREE.AdditiveBlending, depthWrite: false
       }));
       glow.scale.set(4.2, 4.2, 1);
+      // cache rest-state colors so placeShip3D can re-tint from base each frame (no compounding)
+      grp.userData.bodyMat = bodyMat;
+      grp.userData.bodyBase = new THREE.Color(0xff4d4d);
+      grp.userData.bodyEmisBase = new THREE.Color(0x7a1a1a);
+      grp.userData.bodyEmisI = 0.6;
+      grp.userData.finMat = finMat;
+      grp.userData.finBase = new THREE.Color(0x2e5aa8);
+      grp.userData.finEmisBase = new THREE.Color(0x162a4a);
+      grp.userData.finEmisI = 0.45;
+      grp.userData.engineMat = eng.material;
+      grp.userData.engineBase = new THREE.Color(0xffaa00);
+      glow.userData.baseColor = new THREE.Color(0xffd9a0);
+      glow.userData.baseOpacity = 0.5;
       return { ship: grp, glow };
     }
 
@@ -2380,7 +2556,7 @@
           shipLbl.style.display = '';
           shipLbl.style.left = Math.min(p.x + 12, (document.getElementById('viz-pane-3d').clientWidth - 120)) + 'px';
           shipLbl.style.top = Math.max(4, p.y - 8) + 'px';
-          shipLbl.textContent = 'ghost ship · apparent ' + obs.x.toFixed(2) + ' ly (true ' + state.x.toFixed(2) + ')';
+          shipLbl.textContent = 'ghost ship \u00b7 apparent ' + obs.x.toFixed(2) + ' ly (true ' + state.x.toFixed(2) + ')';
         } else {
           shipLbl.style.display = 'none';
         }
@@ -2405,10 +2581,26 @@
       const xPos = frac * FAR3D;
       ghostShip3d.position.set(xPos, SHIP_Y3D, 0);
       ghostShip3d.rotation.y = (obs.leg === 'out') ? 0 : Math.PI; // point along travel direction
+
+      // Relativistic visuals: Lorentz contraction along motion + Doppler hue rotation + beaming.
+      const rv = relativisticVisuals(beta, obs.leg === 'out', terrellEnabled);
+      ghostShip3d.scale.set(rv.contraction, 1, 1);
+      const u = ghostShip3d.userData;
+      if (u) {
+        if (u.bodyMat)   applyShift(u.bodyMat,   u.bodyBase,   rv, u.bodyEmisBase, u.bodyEmisI);
+        if (u.finMat)    applyShift(u.finMat,    u.finBase,    rv, u.finEmisBase, u.finEmisI);
+        if (u.engineMat) applyShift(u.engineMat, u.engineBase, rv);
+      }
+
       ghostGlow3d.position.copy(ghostShip3d.position);
-      // gentle pulse + slow spin for life
+      // gentle pulse + slow spin for life, scaled by relativistic beaming
       const tt = performance.now() * 0.003;
-      if (ghostGlow3d.material) ghostGlow3d.material.opacity = 0.42 + 0.16 * (0.5 + 0.5 * Math.sin(tt));
+      if (ghostGlow3d.material) {
+        const gb = ghostGlow3d.userData && ghostGlow3d.userData.baseColor;
+        const hueAdd = rv.hueRad / (2 * Math.PI);
+        if (gb) { gb.getHSL(_hslTmp); ghostGlow3d.material.color.setHSL((_hslTmp.h + hueAdd) % 1, _hslTmp.s, Math.max(0, Math.min(1, _hslTmp.l * rv.light))); }
+        ghostGlow3d.material.opacity = (0.42 + 0.16 * (0.5 + 0.5 * Math.sin(tt))) * rv.light;
+      }
       if (earthSpin3d) earthSpin3d.rotation.y += 0.0006;
       if (asteroidSpin3d) asteroidSpin3d.rotation.x += 0.0015;
       update3DOverlay(obs, state);
