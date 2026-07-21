@@ -1820,25 +1820,35 @@
     }
 
     // Light pulses in transit at sim time tNow: each was emitted by the ship at te and
-    // travels straight toward the current observer at c (distance = age). Same retarded-time
-    // math as the ghost ship — made visible.
+    // travels at c (distance = age). For the Earth observer the signal retraces the ship's
+    // own path — it slides back along the route line of the leg it was emitted on, reaching
+    // Earth at x=0 (Earth lies on the ship's line; the route y-offsets are only schematic).
+    // For the off-axis midpoint observer it flies straight from ship to observer.
+    // Travel distances use the true x-axis geometry, same retarded-time math as the ghost ship.
     function updatePulses(tNow) {
       if (!pulsePool.length) return;
       const obs = getObserverLoc();
+      const earthObs = observerIsEarth();
       const T = 2 * D / beta;
       const dte = Math.max(0.3, T / 56); // emission cadence in years of sim time
       let i = 0;
       for (let te = 0; te <= tNow && i < pulsePool.length; te += dte) {
         const em = shipXAtTime(te);
         const y0 = em.leg === 'out' ? routeOutY : routeInY;
-        const dx = obs.x - em.x, dy = obs.y - y0;
-        const dist = Math.hypot(dx, dy);
         const age = tNow - te;
+        // True light-travel distance (ship's worldline is the x-axis)
+        const dist = earthObs ? em.x : Math.hypot(obs.x - em.x, obs.y);
         if (age < dist && dist > 1e-9) { // still traveling
           const s = age / dist;
           const m = pulsePool[i++];
           m.visible = true;
-          m.position.set(em.x + dx * s, y0 + dy * s, 0.02);
+          if (earthObs) {
+            // Back along the leg's own route line toward Earth at x=0
+            m.position.set(em.x - age, y0, 0.02);
+          } else {
+            // Straight line from the drawn ship position to the observer
+            m.position.set(em.x + (obs.x - em.x) * s, y0 + (obs.y - y0) * s, 0.02);
+          }
           const tw = 0.75 + 0.25 * Math.sin((te + tNow) * 7);
           m.material.opacity = (0.35 + 0.55 * (1 - s)) * tw;
         }
