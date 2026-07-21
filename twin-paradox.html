@@ -3,27 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RelSim — Special Relativity Simulator</title>
+  <title>Twin Paradox — Special Relativity Simulator</title>
   <style>
     :root {
-      --bg: #0a0e17;
-      --panel: #121826;
+      --bg: #030510;
+      --panel: rgba(14, 19, 32, 0.82);
       --text: #e6e9f0;
       --muted: #8a93a8;
       --accent: #4aa3ff;
       --accent2: #ff9f4a;
+      --cyan: #6fe0ff;
+      --magenta: #c86fff;
       --earth: #3a7bd5;
       --asteroid: #8b7355;
       --ship: #e6f0ff;
+      --line: rgba(90, 120, 180, 0.25);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: var(--bg);
+      background:
+        radial-gradient(1100px 620px at 78% 12%, rgba(70, 40, 120, 0.16), transparent 60%),
+        radial-gradient(950px 560px at 12% 88%, rgba(20, 60, 120, 0.14), transparent 60%),
+        var(--bg);
       color: var(--text);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       font-size: 14px;
       line-height: 1.4;
+      min-height: 100vh;
     }
     .app {
       max-width: 1100px;
@@ -34,17 +41,30 @@
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
     h1 {
-      font-size: 22px;
+      font-size: clamp(26px, 4.2vw, 40px);
       margin: 0;
-      font-weight: 600;
-      letter-spacing: -0.02em;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      background: linear-gradient(100deg, #9fd8ff 10%, #ffffff 38%, #c86fff 65%, #ff9f4a 95%);
+      background-size: 220% 100%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      filter: drop-shadow(0 0 16px rgba(111, 224, 255, 0.28));
+      animation: h1sheen 8s linear infinite;
     }
+    @keyframes h1sheen { to { background-position: 220% 0; } }
     .subtitle {
       color: var(--muted);
-      font-size: 13px;
+      font-size: 11px;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      margin-top: 2px;
     }
     .main {
       display: grid;
@@ -56,11 +76,11 @@
     }
     .viz-container {
       position: relative;
-      background: #05070f;
-      border: 1px solid #1f2636;
-      border-radius: 10px;
+      background: #030510;
+      border: 1px solid var(--line);
+      border-radius: 14px;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      box-shadow: 0 14px 44px rgba(0,0,0,0.55), 0 0 34px rgba(74, 163, 255, 0.10), inset 0 1px 0 rgba(255,255,255,0.05);
     }
     canvas {
       display: block;
@@ -100,28 +120,34 @@
 
     .clock-card {
       background: var(--panel);
-      border: 1px solid #1f2636;
-      border-radius: 10px;
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      border: 1px solid var(--line);
+      border-radius: 12px;
       padding: 11px 13px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+      box-shadow: 0 6px 22px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
     }
     .clock-card.earth {
-      border-color: #254a75;
+      border-color: rgba(111, 224, 255, 0.45);
+      box-shadow: 0 6px 22px rgba(0,0,0,0.45), 0 0 22px rgba(111, 224, 255, 0.10), inset 0 1px 0 rgba(255,255,255,0.05);
     }
     .clock-card.ship {
-      border-color: #5c4630;
+      border-color: rgba(255, 159, 74, 0.45);
+      box-shadow: 0 6px 22px rgba(0,0,0,0.45), 0 0 22px rgba(255, 159, 74, 0.10), inset 0 1px 0 rgba(255,255,255,0.05);
     }
 
     .clock-header {
       display: flex;
       align-items: center;
       gap: 7px;
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 10.5px;
+      font-weight: 700;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
       color: #a3adbf;
       margin-bottom: 7px;
       padding-bottom: 6px;
-      border-bottom: 1px solid #1f2636;
+      border-bottom: 1px solid var(--line);
     }
     .clock-header .icon {
       width: 17px;
@@ -189,18 +215,23 @@
     .step-btn:active { transform: translateY(1px); }
     .controls {
       background: var(--panel);
-      border: 1px solid #1f2636;
-      border-radius: 10px;
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      border: 1px solid var(--line);
+      border-radius: 14px;
       padding: 14px;
       display: flex;
       flex-direction: column;
       gap: 14px;
+      box-shadow: 0 14px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
     }
     .control-group {
       display: flex;
       flex-direction: column;
       gap: 6px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(90, 120, 180, 0.14);
     }
+    .control-group:last-child { border-bottom: none; padding-bottom: 0; }
     .control-row {
       display: flex;
       align-items: center;
@@ -212,7 +243,7 @@
     }
     label.opt input { accent-color: var(--accent); }
     label.opt.opt-disabled, label.opt:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
-    .opt-label { min-width: 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+    .opt-label { min-width: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; opacity: 0.85; font-family: ui-monospace, Menlo, monospace; color: #8fa0bd; }
     .opt-note { font-size: 11px; opacity: 0.62; line-height: 1.45; }
     label {
       font-size: 12px;
@@ -237,10 +268,11 @@
       flex-direction: column;
       gap: 3px;
       font-size: 12px;
-      background: #0a0e17;
-      border-radius: 6px;
-      padding: 8px 10px;
-      border: 1px solid #1f2636;
+      background: rgba(5, 8, 16, 0.7);
+      border-radius: 9px;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
     }
     .info > div {
       display: flex;
@@ -281,36 +313,43 @@
       margin-top: 8px;
       width: 100%;
       background: transparent;
-      border: 1px solid #3a4558;
+      border: 1px solid rgba(90, 120, 180, 0.3);
       color: #8a93a8;
-      padding: 5px 8px;
-      border-radius: 6px;
+      padding: 6px 8px;
+      border-radius: 8px;
       font-size: 11px;
+      font-family: ui-monospace, Menlo, monospace;
+      letter-spacing: 0.08em;
       cursor: pointer;
-      transition: all 0.1s ease;
+      transition: all 0.12s ease;
     }
     .replay-btn:hover {
       background: #2a3448;
       color: #c5cad6;
-      border-color: #4aa3ff;
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(111, 224, 255, 0.18);
     }
     button {
-      background: #1f2636;
+      background: rgba(31, 38, 54, 0.7);
       color: var(--text);
-      border: 1px solid #2a3448;
+      border: 1px solid rgba(90, 120, 180, 0.35);
       padding: 6px 12px;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 13px;
-      transition: all 0.1s ease;
+      transition: all 0.12s ease;
     }
-    button:hover { background: #2a3448; }
+    button:hover { background: #2a3448; border-color: var(--cyan); box-shadow: 0 0 14px rgba(111, 224, 255, 0.18); }
     button:active { transform: translateY(1px); }
     button.primary {
-      background: var(--accent);
-      border-color: #2f6cb8;
+      background: linear-gradient(160deg, #3a96f0, #2f6cb8);
+      border-color: rgba(111, 224, 255, 0.55);
       color: white;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      box-shadow: 0 0 18px rgba(74, 163, 255, 0.35);
     }
+    button.primary:hover { box-shadow: 0 0 26px rgba(74, 163, 255, 0.55); }
     .legend {
       display: flex;
       gap: 14px;
@@ -336,9 +375,21 @@
       line-height: 1.35;
     }
     .units {
-      font-size: 11px;
+      font-size: 10.5px;
       color: #6b7689;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.08em;
     }
+    .units a {
+      color: var(--cyan) !important;
+      text-decoration: none !important;
+      border: 1px solid rgba(111, 224, 255, 0.3);
+      border-radius: 6px;
+      padding: 3px 8px;
+      background: rgba(10, 14, 23, 0.5);
+      transition: all 0.12s ease;
+    }
+    .units a:hover { border-color: var(--cyan); box-shadow: 0 0 12px rgba(111, 224, 255, 0.25); }
 
     /* ====================== Mobile responsiveness ====================== */
     @media (max-width: 600px) {
@@ -477,8 +528,8 @@
     }
 
     .tour-highlight {
-      box-shadow: 0 0 0 3px #4aa3ff, 0 0 0 8px rgba(74, 163, 255, 0.3);
-      border-radius: 6px;
+      box-shadow: 0 0 0 2px var(--cyan), 0 0 0 8px rgba(111, 224, 255, 0.22), 0 0 26px rgba(111, 224, 255, 0.35);
+      border-radius: 8px;
       transition: box-shadow 0.15s ease;
       z-index: 1001;
       position: relative;
@@ -487,15 +538,15 @@
     .tour-popup {
       position: absolute;
       z-index: 1002;
-      background: #121826;
+      background: rgba(14, 19, 32, 0.97);
       color: #e6e9f0;
-      border: 1px solid #4aa3ff;
-      border-radius: 8px;
+      border: 1px solid rgba(111, 224, 255, 0.6);
+      border-radius: 10px;
       padding: 10px 12px;
       max-width: 240px;
       font-size: 13px;
       line-height: 1.35;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.6), 0 0 22px rgba(111, 224, 255, 0.18);
       pointer-events: auto;
     }
 
@@ -533,16 +584,17 @@
     }
 
     .tour-popup button {
-      background: #4aa3ff;
+      background: linear-gradient(160deg, #3a96f0, #2f6cb8);
       color: white;
-      border: none;
+      border: 1px solid rgba(111, 224, 255, 0.5);
       padding: 4px 10px;
-      border-radius: 5px;
+      border-radius: 6px;
       font-size: 12px;
       cursor: pointer;
     }
     .tour-popup button:hover {
       background: #3a8fd9;
+      box-shadow: 0 0 12px rgba(111, 224, 255, 0.35);
     }
     .tour-popup button.secondary {
       background: #2a3448;
@@ -677,10 +729,10 @@
   <div class="app">
     <header>
       <div>
-        <h1>RelSim</h1>
-        <div class="subtitle">Special relativity round-trip simulator (WebGL)</div>
+        <h1>TWIN&nbsp;PARADOX</h1>
+        <div class="subtitle">special relativity · round-trip simulator</div>
       </div>
-      <div class="units"><a href="index.html" style="color:var(--accent);text-decoration:none;">⌂ Simulations</a> &nbsp;·&nbsp; <a href="milkyway.html" style="color:var(--accent);text-decoration:none;">Milky Way 3D →</a> &nbsp;·&nbsp; Units: c = 1 (light-years / years)</div>
+      <div class="units"><a href="index.html">⌂ SIMULATIONS</a> &nbsp; <a href="milkyway.html">MILKY WAY 3D →</a> &nbsp; <span style="opacity:0.6">c = 1 · ly/years</span></div>
     </header>
 
     <div class="main">
@@ -1329,6 +1381,10 @@
     let routeOutY = 1.05;
     let routeInY = -1.05;
     let stars;
+    let starsA, starsB, nebulaSprites = [];
+    let routeGlowOut, routeGlowIn, astGlow;
+    let pulsePool = [], pulseGroup;
+    let shipTrail;
     let earthTexture, asteroidTexture, shipTexture, ghostTexture;
 
     // State
@@ -1363,7 +1419,7 @@
       renderer.setSize(width, height);
 
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x05070f);
+      scene.background = new THREE.Color(0x030510);
 
       // Orthographic camera: will be updated to fit D
       const aspect = width / height;
@@ -1375,21 +1431,50 @@
       );
       camera.position.z = 5;
 
-      // Subtle stars
-      const starCount = 180;
-      const starPos = new Float32Array(starCount * 3);
-      for (let i = 0; i < starCount * 3; i += 3) {
-        starPos[i] = (Math.random() - 0.5) * 120;
-        starPos[i + 1] = (Math.random() - 0.5) * 9;
-        starPos[i + 2] = -2 + Math.random() * -3;
+      // Deep-space backdrop: two twinkling star layers + faint nebula sprites
+      const mkStars = (count, size, spreadX, spreadY) => {
+        const p = new Float32Array(count * 3), c = new Float32Array(count * 3);
+        const tint = new THREE.Color();
+        for (let i = 0; i < count; i++) {
+          p[i * 3] = (Math.random() - 0.5) * spreadX;
+          p[i * 3 + 1] = (Math.random() - 0.5) * spreadY;
+          p[i * 3 + 2] = -2 - Math.random() * 3;
+          const r = Math.random();
+          tint.set(r < 0.6 ? '#dfe9ff' : r < 0.85 ? '#9fc8ff' : '#ffd9a8');
+          c[i * 3] = tint.r; c[i * 3 + 1] = tint.g; c[i * 3 + 2] = tint.b;
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+        g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+        const m = new THREE.Points(g, new THREE.PointsMaterial({
+          size, vertexColors: true, transparent: true, opacity: 0.8,
+          sizeAttenuation: true, depthWrite: false
+        }));
+        m.frustumCulled = false;
+        scene.add(m);
+        return m;
+      };
+      starsA = mkStars(260, 0.045, 170, 15);
+      starsB = mkStars(150, 0.085, 170, 15);
+      stars = starsA; // legacy ref
+
+      // Faint colored nebulae (positioned in updateCameraAndRoutes)
+      nebulaSprites = [];
+      const nebDefs = [[0x4a3aff, 0.20, 0.62], [0x2a6fff, 0.75, -0.55], [0x8a3aff, 0.45, -0.8], [0x2affd8, 0.92, 0.7]];
+      for (const [col, fx, fy] of nebDefs) {
+        const nm = new THREE.Mesh(
+          new THREE.PlaneGeometry(1, 1),
+          new THREE.MeshBasicMaterial({
+            map: makeRadialTexture('rgba(255,255,255,1)', 'rgba(255,255,255,0)'),
+            color: col, transparent: true, opacity: 0.055,
+            depthWrite: false, blending: THREE.AdditiveBlending
+          })
+        );
+        nm.userData.fx = fx; nm.userData.fy = fy;
+        nm.position.z = -4;
+        scene.add(nm);
+        nebulaSprites.push(nm);
       }
-      const starGeom = new THREE.BufferGeometry();
-      starGeom.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-      stars = new THREE.Points(
-        starGeom,
-        new THREE.PointsMaterial({ color: 0x445566, size: 0.04, sizeAttenuation: true })
-      );
-      scene.add(stars);
 
       // Earth - cartoon textured
       earthTexture = createEarthTexture(128);
@@ -1427,6 +1512,28 @@
       routeIn.position.y = routeInY;
       routeIn.position.z = -0.02;
       scene.add(routeIn);
+
+      // Neon glow underlays for the routes + soft glows behind Earth & asteroid
+      const glowTex = makeRadialTexture('rgba(255,255,255,1)', 'rgba(255,255,255,0)');
+      const mkGlow = (w, h, color, op) => {
+        const m = new THREE.Mesh(
+          new THREE.PlaneGeometry(w, h),
+          new THREE.MeshBasicMaterial({
+            map: glowTex, color, transparent: true, opacity: op,
+            depthWrite: false, blending: THREE.AdditiveBlending
+          })
+        );
+        scene.add(m);
+        return m;
+      };
+      routeGlowOut = mkGlow(1, 0.55, 0x4aa3ff, 0.30);
+      routeGlowOut.position.z = -0.03;
+      routeGlowIn = mkGlow(1, 0.55, 0xff9f4a, 0.30);
+      routeGlowIn.position.z = -0.03;
+      const earthGlow = mkGlow(1.7, 1.7, 0x3a8fd9, 0.5);
+      earthGlow.position.set(0, 0, -0.015);
+      astGlow = mkGlow(1.5, 1.5, 0x8b7355, 0.45);
+      astGlow.position.z = -0.015;
 
       // Faint direct path line (guide)
       const guide = new THREE.Mesh(
@@ -1517,6 +1624,44 @@
       );
       shadowShipMesh.userData.halo = halo;
       scene.add(halo);
+
+      // Light pulses: photon packets the ship sends toward the observer (travel at c;
+      // positions are computed from sim time, so they stay correct during play, pause and scrub)
+      pulseGroup = new THREE.Group();
+      scene.add(pulseGroup);
+      const pulseTex = makeRadialTexture('rgba(190,235,255,1)', 'rgba(190,235,255,0)');
+      pulsePool = [];
+      for (let i = 0; i < 72; i++) {
+        const pm = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.34, 0.34),
+          new THREE.MeshBasicMaterial({
+            map: pulseTex, color: 0x9fdcff, transparent: true, opacity: 0.85,
+            depthWrite: false, blending: THREE.AdditiveBlending
+          })
+        );
+        pm.visible = false;
+        pulseGroup.add(pm);
+        pulsePool.push(pm);
+      }
+
+      // Engine trail (decorative; mirrored with the ship by the parent's scale flip)
+      const trailCanvas = makeCanvas(128, 32);
+      const trailCtx = trailCanvas.getContext('2d');
+      const trailGrad = trailCtx.createLinearGradient(0, 0, 128, 0);
+      trailGrad.addColorStop(0, 'rgba(255,80,40,0)');
+      trailGrad.addColorStop(0.55, 'rgba(255,120,60,0.45)');
+      trailGrad.addColorStop(1, 'rgba(255,190,90,0.9)');
+      trailCtx.fillStyle = trailGrad;
+      trailCtx.fillRect(0, 0, 128, 32);
+      shipTrail = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.15, 0.34),
+        new THREE.MeshBasicMaterial({
+          map: new THREE.CanvasTexture(trailCanvas), transparent: true, opacity: 0.85,
+          depthWrite: false, blending: THREE.AdditiveBlending
+        })
+      );
+      shipTrail.position.set(-1.05, -0.06, -0.01);
+      shipMesh.add(shipTrail);
 
       // Safe initial positions
       shipMesh.position.set(0, routeOutY, 0.03);
@@ -1629,6 +1774,19 @@
       asteroidMesh.position.x = D;
       asteroidMesh.position.y = 0;
 
+      // Route glow underlays track the routes
+      if (routeGlowOut) { routeGlowOut.scale.set(D, 1, 1); routeGlowOut.position.x = half; routeGlowOut.position.y = routeOutY; }
+      if (routeGlowIn) { routeGlowIn.scale.set(D, 1, 1); routeGlowIn.position.x = half; routeGlowIn.position.y = routeInY; }
+      if (astGlow) astGlow.position.x = D;
+
+      // Nebulae spread across the current view
+      for (const n of nebulaSprites) {
+        const sc = Math.max(w * 0.55, 8);
+        n.scale.set(sc, sc * 0.7, 1);
+        n.position.x = cx + (n.userData.fx - 0.5) * w;
+        n.position.y = cy + n.userData.fy * (top - bottom) * 0.5;
+      }
+
       updateObserverIcon();
 
       // Recreate tick marks along the route baseline
@@ -1654,7 +1812,42 @@
       }
     }
 
+    // Ship's position/leg at Earth-frame time te (the worldline the pulses are emitted from)
+    function shipXAtTime(te) {
+      const T1 = D / beta;
+      if (te <= T1) return { x: beta * te, leg: 'out' };
+      return { x: Math.max(0, D - beta * (te - T1)), leg: 'in' };
+    }
+
+    // Light pulses in transit at sim time tNow: each was emitted by the ship at te and
+    // travels straight toward the current observer at c (distance = age). Same retarded-time
+    // math as the ghost ship — made visible.
+    function updatePulses(tNow) {
+      if (!pulsePool.length) return;
+      const obs = getObserverLoc();
+      const T = 2 * D / beta;
+      const dte = Math.max(0.3, T / 56); // emission cadence in years of sim time
+      let i = 0;
+      for (let te = 0; te <= tNow && i < pulsePool.length; te += dte) {
+        const em = shipXAtTime(te);
+        const y0 = em.leg === 'out' ? routeOutY : routeInY;
+        const dx = obs.x - em.x, dy = obs.y - y0;
+        const dist = Math.hypot(dx, dy);
+        const age = tNow - te;
+        if (age < dist && dist > 1e-9) { // still traveling
+          const s = age / dist;
+          const m = pulsePool[i++];
+          m.visible = true;
+          m.position.set(em.x + dx * s, y0 + dy * s, 0.02);
+          const tw = 0.75 + 0.25 * Math.sin((te + tNow) * 7);
+          m.material.opacity = (0.35 + 0.55 * (1 - s)) * tw;
+        }
+      }
+      for (; i < pulsePool.length; i++) pulsePool[i].visible = false;
+    }
+
     function placeShip(state) {
+      updatePulses(state.t);
       // True ship position (user-placed / actual coordinate position)
       const y = (state.leg === 'out') ? routeOutY : routeInY;
       shipMesh.position.set(state.x, y, 0.03);
@@ -2117,7 +2310,6 @@
     // ============ Animation ============
     function animate(now = 0) {
       if (!playing) return;
-
       const dt = Math.max(0, (now - (lastRafTime || now)) / 1000);
       lastRafTime = now;
 
@@ -2140,6 +2332,17 @@
       }
     }
 
+    // Ambient loop: star twinkle, engine-trail flicker, continuous rendering.
+    // Runs independently of play/pause; physics state is only advanced by animate().
+    function ambientLoop(now = 0) {
+      requestAnimationFrame(ambientLoop);
+      const t = now / 1000;
+      if (starsA) starsA.material.opacity = 0.55 + 0.3 * Math.sin(t * 0.8);
+      if (starsB) starsB.material.opacity = 0.6 + 0.35 * Math.sin(t * 1.15 + 2.1);
+      if (shipTrail) shipTrail.material.opacity = (playing ? 0.95 : 0.4) * (0.8 + 0.2 * Math.sin(t * 9));
+      render();
+    }
+
     // ============ Resize ============
     function resizeCanvas() {
       // Resize both panes (2D always; 3D when enabled)
@@ -2151,6 +2354,7 @@
       initThree();
       forceInitialLayout();
       setupControls();
+      ambientLoop();
 
       // Initial state
       updateLabelsAndGamma();
