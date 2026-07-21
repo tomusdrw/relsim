@@ -1,13 +1,20 @@
-# RelSim — Special Relativity Simulator
+# RelSim — Relativistic Universe Simulators
 
 [![Deploy to GitHub Pages](https://github.com/tomusdrw/relsim/actions/workflows/deploy.yml/badge.svg)](https://github.com/tomusdrw/relsim/actions/workflows/deploy.yml)
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://todr.me/relsim/)
 
+A collection of interactive WebGL simulations of space and relativity.
+
+**👉 Live:** [https://todr.me/relsim/](https://todr.me/relsim/) — game-style launcher dispatching to the simulations below.
+
+| Simulation | Page | Description |
+|---|---|---|
+| **Milky Way 3D** | [`milkyway.html`](https://todr.me/relsim/milkyway.html) | Interactive scale model of the Milky Way: spiral arms, bar, bulge, dust lanes, globular clusters, satellite galaxies and the Sun's neighborhood, with orbit/pan/zoom camera and a searchable catalog of ~60 known objects (with distances from Sol and fly-to locating). |
+| **RelSim** | [`relsim.html`](https://todr.me/relsim/relsim.html) | Special relativity round-trip simulator demonstrating the twin paradox with light-signal propagation. |
+
+## RelSim — Special Relativity Simulator
+
 An interactive WebGL visualization of special relativity, demonstrating the twin paradox with light-signal propagation.
-
-**👉 Live Demo:** [https://todr.me/relsim/](https://todr.me/relsim/)
-
-## Features
 
 - **Earth** (observer) at x=0 and a destination **Asteroid** at configurable distance (default: 10 light-years)
 - Spaceship travels at constant speed (default 0.9c) to the asteroid and back
@@ -61,7 +68,7 @@ python3 -m http.server 8000
 # Then visit http://localhost:8000
 ```
 
-No build step is required — it's a single self-contained HTML file (Three.js is loaded from a CDN).
+No build step is required — each simulation is a single self-contained HTML file (Three.js is loaded from a CDN).
 
 ## Tech Stack
 
@@ -89,7 +96,7 @@ If you fork this repository:
 To contribute or experiment:
 
 1. Clone the repo
-2. Make changes to `index.html`
+2. Make changes to `index.html` (launcher), `relsim.html` (relativity sim) or `milkyway.html` (galaxy sim)
 3. Open locally or use a live server
 
 Pull requests are welcome!

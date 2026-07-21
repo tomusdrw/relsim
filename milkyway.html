@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Milky Way 3D — Interactive Scale Model</title>
+  <style>
+    :root {
+      --bg: #04060d;
+      --panel: rgba(18, 24, 38, 0.88);
+      --text: #e6e9f0;
+      --muted: #8a93a8;
+      --accent: #4aa3ff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+    #mw { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+
+    /* ------- UI panel ------- */
+    #ui {
+      position: fixed; top: 12px; left: 12px; z-index: 10;
+      width: 252px; max-width: calc(100vw - 24px);
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid #1f2636; border-radius: 12px;
+      padding: 12px 14px;
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+      font-size: 13px;
+    }
+    #ui h1 { font-size: 17px; margin: 0 0 2px; font-weight: 650; letter-spacing: -0.01em; }
+    #ui .sub { color: var(--muted); font-size: 11.5px; font-weight: 500; }
+    #ui .linkrow { margin: 2px 0 10px; font-size: 11.5px; }
+    #ui .linkrow a { color: var(--accent); text-decoration: none; }
+    #ui .linkrow a:hover { text-decoration: underline; }
+    .group { margin-bottom: 10px; }
+    .group .glabel {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: #6b7689; margin-bottom: 5px;
+    }
+    #ui label.opt {
+      display: flex; align-items: center; gap: 7px;
+      color: #c5cad6; font-size: 12.5px; cursor: pointer;
+      padding: 2.5px 0; user-select: none;
+    }
+    #ui label.opt input { accent-color: var(--accent); }
+    .views { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .views button {
+      background: #1f2636; color: var(--text);
+      border: 1px solid #2a3448; padding: 6px 8px; border-radius: 7px;
+      cursor: pointer; font-size: 12px; transition: all 0.1s ease;
+    }
+    .views button:hover { background: #2a3448; border-color: var(--accent); }
+    .views button:active { transform: translateY(1px); }
+    #notes { font-size: 11px; color: var(--muted); line-height: 1.45; }
+    #notes summary { cursor: pointer; color: #a3adbf; font-size: 11.5px; outline: none; }
+    #notes summary:hover { color: var(--text); }
+    #notes p { margin: 6px 0; }
+    #notes .src { color: #6b7689; font-size: 10px; }
+
+    /* ------- HUD / hint ------- */
+    #hud {
+      position: fixed; left: 12px; bottom: 12px; z-index: 10;
+      background: var(--panel); border: 1px solid #1f2636; border-radius: 9px;
+      padding: 6px 11px; font-size: 11.5px; color: #a3adbf;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+      pointer-events: none;
+    }
+    #hud b { color: #e6e9f0; font-weight: 600; }
+    #hint {
+      position: fixed; right: 12px; bottom: 12px; z-index: 10;
+      background: var(--panel); border: 1px solid #1f2636; border-radius: 9px;
+      padding: 6px 11px; font-size: 11px; color: var(--muted);
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+      pointer-events: none;
+    }
+    #panel-toggle {
+      position: fixed; top: 12px; left: 12px; z-index: 11;
+      width: 34px; height: 34px; display: none;
+      align-items: center; justify-content: center;
+      background: var(--panel); border: 1px solid #2a3448; color: #a3adbf;
+      border-radius: 9px; cursor: pointer; font-size: 16px;
+    }
+    body.panel-collapsed #ui { display: none; }
+    body.panel-collapsed #panel-toggle { display: flex; }
+
+    /* ------- world labels ------- */
+    #labels { position: fixed; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
+    .wl {
+      position: absolute; left: 0; top: 0;
+      transform: translate(-50%, -50%);
+      white-space: nowrap; user-select: none;
+      color: #c9d6f2; font-size: 11.5px; font-weight: 500;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6);
+      transition: opacity 0.25s ease;
+    }
+    .wl::before {
+      content: ""; display: inline-block; width: 4px; height: 4px;
+      border-radius: 50%; background: currentColor; opacity: 0.75;
+      margin-right: 5px; vertical-align: 2px;
+    }
+    .wl.arm { color: #8fd8e8; font-style: italic; font-weight: 400; }
+    .wl.arm::before { display: none; }
+    .wl.cluster { color: #e8d8a8; font-size: 10.5px; }
+    .wl.sat { color: #b8a8f0; font-size: 11px; }
+    .wl.star { color: #fff2c8; font-size: 10px; font-family: ui-monospace, Menlo, monospace; }
+    .wl.neb { color: #f0b8d0; font-size: 10px; }
+    .wl.ring { color: #5f7290; font-size: 10px; font-family: ui-monospace, Menlo, monospace; }
+    .wl.ring::before { display: none; }
+    .wl.major { color: #ffe9b8; font-weight: 650; font-size: 12.5px; }
+
+    @media (max-width: 700px) {
+      #hint { display: none; }
+      #ui { font-size: 12px; }
+    }
+    /* ------- search & object info ------- */
+    #search {
+      width: 100%; background: #0a0e17; border: 1px solid #2a3448; color: var(--text);
+      padding: 6px 9px; border-radius: 7px; font-size: 12.5px; outline: none;
+      font-family: inherit;
+    }
+    #search:focus { border-color: var(--accent); }
+    #results {
+      margin-top: 6px; max-height: 208px; overflow-y: auto;
+      border: 1px solid #1f2636; border-radius: 8px; background: rgba(10, 14, 23, 0.6);
+    }
+    #results:empty { display: none; }
+    .res-row {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+      padding: 5px 9px; cursor: pointer; border-bottom: 1px solid rgba(31, 38, 54, 0.6);
+    }
+    .res-row:last-child { border-bottom: none; }
+    .res-row:hover { background: #1f2636; }
+    .res-name { color: #d5dce8; font-size: 12px; line-height: 1.25; }
+    .res-type { display: block; color: #77839a; font-size: 9.5px; }
+    .res-meta { color: #8a93a8; font-size: 10px; white-space: nowrap; font-family: ui-monospace, Menlo, monospace; }
+    .res-none { padding: 7px 9px; color: #6b7689; font-size: 11px; }
+    #obj-info {
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: 52px; z-index: 10;
+      background: var(--panel); border: 1px solid #2a3448; border-radius: 9px;
+      padding: 7px 12px; font-size: 12px; color: #c9d2e3; line-height: 1.4;
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+      display: none; align-items: baseline; gap: 10px; max-width: calc(100vw - 24px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    #obj-info b { color: #fff; font-weight: 650; }
+    #obj-info button {
+      background: none; border: none; color: #8a93a8; cursor: pointer;
+      font-size: 13px; padding: 0 2px; align-self: center;
+    }
+    #obj-info button:hover { color: #fff; }
+
+    #nogl {
+      position: fixed; inset: 0; z-index: 100; display: none;
+      align-items: center; justify-content: center; text-align: center;
+      color: var(--muted); font-size: 14px; padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="mw"></canvas>
+  <div id="labels"></div>
+
+  <button id="panel-toggle" title="Show panel" aria-label="Show panel">☰</button>
+
+  <div id="ui">
+    <h1>Milky Way <span class="sub">— 3D scale model</span></h1>
+    <div class="linkrow"><a href="index.html">⌂ Simulations</a> · <a href="relsim.html">RelSim (special relativity)</a></div>
+
+    <div class="group">
+      <div class="glabel">View</div>
+      <div class="views">
+        <button id="v-face" type="button">Face-on</button>
+        <button id="v-edge" type="button">Edge-on</button>
+        <button id="v-sun" type="button">☉ Sun</button>
+        <button id="v-full" type="button">Satellites</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="glabel">Find object <span style="text-transform:none;letter-spacing:0;opacity:0.65">(press /)</span></div>
+      <input id="search" type="text" placeholder="Search — e.g. M42, Vega, LMC…" autocomplete="off" spellcheck="false">
+      <div id="results"></div>
+    </div>
+
+    <div class="group" id="toggles">
+      <div class="glabel">Layers</div>
+      <label class="opt"><input type="checkbox" id="t-labels" checked> Labels</label>
+      <label class="opt"><input type="checkbox" id="t-rings" checked> Scale rings &amp; axes</label>
+      <label class="opt"><input type="checkbox" id="t-arms" checked> Spiral arms</label>
+      <label class="opt"><input type="checkbox" id="t-dust" checked> Dust lanes</label>
+      <label class="opt"><input type="checkbox" id="t-hii" checked> Nebulae (H II regions)</label>
+      <label class="opt"><input type="checkbox" id="t-gc" checked> Globular clusters</label>
+      <label class="opt"><input type="checkbox" id="t-sats" checked> Satellite galaxies</label>
+      <label class="opt"><input type="checkbox" id="t-stars" checked> Notable stars &amp; nebulae</label>
+      <label class="opt"><input type="checkbox" id="t-rot"> Auto-rotate</label>
+    </div>
+
+    <details id="notes">
+      <summary>Data sources &amp; accuracy notes</summary>
+      <p>Units are parsecs; positions are galactocentric (+x toward the Sun, +y toward ℓ=90°, +z toward the north galactic pole). Distances and orientations follow published values; star/nebula <em>point sizes</em> are illustrative, not physical.</p>
+      <p>☉ Sun: 8.15 kpc from the center, 20 pc above the plane. Bar: half-length ≈ 4 kpc, tilted 27°. Arms: 4 logarithmic arms, pitch ≈ 13°, fitted to observed arm tangencies &amp; crossings (Scutum +33° vs. obs. +31°, Sagittarius +44° vs. +50°, Carina at 2.4 kpc vs. ≈2.3 kpc). Arm geometry is still debated — this is one defensible model.</p>
+      <p>Satellites &amp; globular clusters sit at measured positions (named clusters are catalog entries; the rest of the ~150-cluster halo is a statistical fill-in). Notable stars use Gaia/Hipparcos distances — zoom to the Sun to see them.</p>
+      <p class="src">Sources: GRAVITY Collab. 2019 (R₀); Wegg+ 2015 (bar); Vallée 2014c/2015/2017 (arms); Bennett &amp; Bovy 2019 (z☉); Pietrzyński+ 2019 / Graczyk+ 2020 (LMC/SMC); McConnachie 2012 (dSph); Harris 1996, 2010 ed. (clusters); Bland-Hawthorn &amp; Gerhard 2016 (disk).</p>
+    </details>
+  </div>
+
+  <div id="hud">distance: <b id="hud-dist">—</b></div>
+  <div id="obj-info"><span id="oi-text"></span><button id="oi-close" aria-label="Close">✕</button></div>
+  <div id="hint">drag&nbsp;·&nbsp;rotate&ensp;|&ensp;right-drag&nbsp;/&nbsp;shift-drag&nbsp;·&nbsp;pan&ensp;|&ensp;scroll&nbsp;/&nbsp;pinch&nbsp;·&nbsp;zoom&ensp;|&ensp;double-click&nbsp;·&nbsp;focus</div>
+  <div id="nogl">WebGL is not available in this browser, so the 3D view cannot start.</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script>
+  'use strict';
+  /* ================================================================
+     Milky Way 3D scale model
+     Units: parsecs. Galactocentric frame: +x toward the Sun,
+     +y toward galactic longitude l=90, +z toward the north pole.
+     ================================================================ */
+  const D = Math.PI / 180;
+  const R0 = 8150;          // Sun galactocentric distance, pc (GRAVITY Collab. 2019: 8.15 kpc)
+  const SUN_Z = 20;         // Sun height above the plane, pc (Bennett & Bovy 2019)
+  const LY = 3.26156;       // light-years per parsec
+
+  // Spiral arms: trailing logarithmic spirals R(th) = Rc * exp(-tan(pitch) * th),
+  // anchored at the Sun-azimuth crossing (th=0) and verified against the observed
+  // sightline tangencies (Vallee 2014c) and arm crossings (Russeil 2003).
+  // th range is the drawn segment; density tapers at both ends.
+  const ARMS = [
+    { name: 'Norma–Outer',        Rc: 4350, pitch: 13.0, tMin: -300, tMax: 160, w: 1.00 },
+    { name: 'Scutum–Centaurus',   Rc: 5500, pitch: 13.0, tMin: -300, tMax: 130, w: 1.15 },
+    { name: 'Sagittarius–Carina', Rc: 6600, pitch: 13.0, tMin: -130, tMax: 200, w: 0.90 },
+    { name: 'Perseus',            Rc: 9420, pitch: 13.0, tMin: -120, tMax: 120, w: 0.85 },
+  ];
+  const SPUR = { name: 'Orion Spur', Rc: 7940, pitch: 11.0, tMin: -45, tMax: 45, w: 0.5 };
+  const BAR_HALF = 4000;    // pc (Wegg, Gerhard & Portail 2015: ~4-5 kpc)
+  const BAR_ANGLE = 27 * D; // bar major axis vs. Sun-center line
+
+  function armPoint(arm, thDeg) {
+    const k = Math.tan(arm.pitch * D);
+    const R = arm.Rc * Math.exp(-k * thDeg * D);
+    const th = thDeg * D;
+    return [R * Math.cos(th), R * Math.sin(th), R];
+  }
+
+  /* ---------------- seeded RNG + samplers ---------------- */
+  let _seed = 0x9e3779b9;
+  function rnd() { // mulberry32 — stable layout across loads
+    _seed |= 0; _seed = (_seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(_seed ^ (_seed >>> 15), 1 | _seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function gauss() { // Box–Muller
+    let u = 0, v = 0;
+    while (u === 0) u = rnd();
+    while (v === 0) v = rnd();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function expDisk(Rd, Rmax) { // exponential surface density sample
+    for (;;) {
+      const R = -Rd * Math.log(1 - rnd());
+      if (R < Rmax) return R;
+    }
+  }
+
+  /* ---------------- textures (canvas sprites) ---------------- */
+  function radialTex(size, stops) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (const [t, col] of stops) grad.addColorStop(t, col);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    const tex = new THREE.CanvasTexture(c);
+    return tex;
+  }
+  function dustTex() {
+    const s = 128;
+    const c = document.createElement('canvas');
+    c.width = c.height = s;
+    const g = c.getContext('2d');
+    g.drawImage(radialTex(s, [[0, 'rgba(40,26,18,0.85)'], [0.45, 'rgba(30,20,14,0.45)'], [1, 'rgba(20,14,10,0)']]).image, 0, 0);
+    // clumpiness: punch holes and add blobs
+    g.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 26; i++) {
+      const x = rnd() * s, y = rnd() * s, r = 4 + rnd() * 16;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(0,0,0,' + (0.15 + rnd() * 0.4) + ')');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+    }
+    g.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 14; i++) {
+      const x = rnd() * s, y = rnd() * s, r = 5 + rnd() * 14;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(24,14,8,' + (0.25 + rnd() * 0.35) + ')');
+      gr.addColorStop(1, 'rgba(24,14,8,0)');
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+    }
+    return new THREE.CanvasTexture(c);
+  }
+
+  /* ---------------- renderer / scene ---------------- */
+  const canvas = document.getElementById('mw');
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
+  } catch (e) {
+    document.getElementById('nogl').style.display = 'flex';
+    throw e;
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x02040a, 1);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.05, 4e6);
+  camera.up.set(0, 0, 1); // z-up world: disk lies flat on screen when edge-on
+
+  const starTex = radialTex(64, [[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(255,255,255,0.55)'], [0.6, 'rgba(255,255,255,0.10)'], [1, 'rgba(255,255,255,0)']]);
+  const softTex = radialTex(64, [[0, 'rgba(255,255,255,0.9)'], [0.4, 'rgba(255,255,255,0.28)'], [1, 'rgba(255,255,255,0)']]);
+  const nebTex = radialTex(64, [[0, 'rgba(255,255,255,0.85)'], [0.5, 'rgba(255,255,255,0.25)'], [1, 'rgba(255,255,255,0)']]);
+  const dstTex = dustTex();
+
+  /* ---------------- point-cloud builder ---------------- */
+  function makeCloud(positions, colors, opts) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const mat = new THREE.PointsMaterial(Object.assign({
+      size: 2, sizeAttenuation: false, vertexColors: true,
+      map: starTex, transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, opacity: 0.85
+    }, opts || {}));
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    return pts;
+  }
+
+  // color helpers
+  const _c = new THREE.Color();
+  function vary(hex, satJ, litJ) {
+    _c.set(hex);
+    const hsl = {};
+    _c.getHSL(hsl);
+    _c.setHSL(
+      (hsl.h + (rnd() - 0.5) * 0.03 + 1) % 1,
+      Math.max(0, Math.min(1, hsl.s + (rnd() - 0.5) * (satJ || 0))),
+      Math.max(0.05, Math.min(1, hsl.l + (rnd() - 0.5) * (litJ || 0)))
+    );
+    return [_c.r, _c.g, _c.b];
+  }
+
+  /* ---------------- galaxy components ---------------- */
+  const layers = {};
+  function addLayer(name, obj) {
+    (layers[name] = layers[name] || []).push(obj);
+    scene.add(obj);
+    return obj;
+  }
+
+  function buildDiskStars() {
+    // Smooth exponential disk (Bland-Hawthorn & Gerhard 2016: Rd ~ 2.6 kpc)
+    const n = 26000, Rd = 2600, Rmax = 15500;
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const R = expDisk(Rd, Rmax);
+      const th = rnd() * 2 * Math.PI;
+      const sz = 240 + 0.012 * R; // mild flaring
+      pos[i * 3] = R * Math.cos(th);
+      pos[i * 3 + 1] = R * Math.sin(th);
+      pos[i * 3 + 2] = gauss() * sz;
+      // inner disk warmer, outer bluer
+      const warm = Math.max(0, 1 - R / 9000);
+      const base = rnd() < warm * 0.7 ? '#ffdba8' : (rnd() < 0.25 ? '#ffd9a8' : (rnd() < 0.5 ? '#ffffff' : '#cfe0ff'));
+      const c = vary(base, 0.15, 0.25);
+      col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+    }
+    addLayer('disk', makeCloud(pos, col, { size: 1.7, opacity: 0.62 }));
+  }
+
+  // Sample a point along an arm with Gaussian spread; returns false if tapered out.
+  function sampleArm(arm, spread, zSpread, inward) {
+    const th = arm.tMin + rnd() * (arm.tMax - arm.tMin);
+    // taper density near segment ends (arms fade, not cut)
+    const edge = 0.12 * (arm.tMax - arm.tMin);
+    const f = Math.min((th - arm.tMin) / edge, (arm.tMax - th) / edge, 1);
+    if (rnd() > Math.max(0, f)) return null;
+    const [x, y, R] = armPoint(arm, th);
+    const thr = th * D;
+    const rx = Math.cos(thr), ry = Math.sin(thr);   // radial (outward) dir
+    const px = -ry, py = rx;                        // perpendicular dir
+    const n1 = gauss() * spread + (inward ? inward : 0);
+    const n2 = gauss() * spread;
+    return [
+      x + px * n1 + rx * n2,
+      y + py * n1 + ry * n2,
+      gauss() * zSpread
+    ];
+  }
+
+  function buildArmStars() {
+    // old-disk population tracing the arms (density waves)
+    const per = 7000;
+    const arms = ARMS.concat([SPUR]);
+    let total = 0;
+    for (const a of arms) total += Math.round(per * a.w);
+    const pos = new Float32Array(total * 3), col = new Float32Array(total * 3);
+    let i = 0;
+    for (const a of arms) {
+      const nA = Math.round(per * a.w);
+      for (let j = 0; j < nA; j++) {
+        const p = sampleArm(a, 240, 110, 0);
+        if (!p) continue;
+        pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2];
+        const c = vary(rnd() < 0.6 ? '#e8eeff' : '#ffd9a8', 0.12, 0.22);
+        col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+        i++;
+      }
+    }
+    addLayer('arms', makeCloud(pos.subarray(0, i * 3), col.subarray(0, i * 3), { size: 1.8, opacity: 0.85 }));
+
+    // young blue population tightly on the arms
+    const ny = 16000;
+    const posY = new Float32Array(ny * 3), colY = new Float32Array(ny * 3);
+    let iy = 0;
+    for (let j = 0; j < ny * 3 && iy < ny; j++) {
+      const a = ARMS[Math.floor(rnd() * ARMS.length)];
+      const p = sampleArm(a, 130, 70, 0);
+      if (!p) continue;
+      posY[iy * 3] = p[0]; posY[iy * 3 + 1] = p[1]; posY[iy * 3 + 2] = p[2];
+      const c = vary(rnd() < 0.75 ? '#a8c8ff' : '#e0ecff', 0.15, 0.2);
+      colY[iy * 3] = c[0]; colY[iy * 3 + 1] = c[1]; colY[iy * 3 + 2] = c[2];
+      iy++;
+    }
+    addLayer('arms', makeCloud(posY.subarray(0, iy * 3), colY.subarray(0, iy * 3), { size: 2.6, opacity: 0.95 }));
+  }
+
+  function buildNebulae() {
+    // H II regions along the arms
+    const n = 2800;
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    let i = 0;
+    for (let j = 0; j < n * 3 && i < n; j++) {
+      const a = ARMS[Math.floor(rnd() * ARMS.length)];
+      const p = sampleArm(a, 110, 55, -60);
+      if (!p) continue;
+      pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2];
+      const c = vary(rnd() < 0.7 ? '#ff6f9f' : '#ff9fb8', 0.2, 0.18);
+      col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+      i++;
+    }
+    addLayer('hii', makeCloud(pos.subarray(0, i * 3), col.subarray(0, i * 3), { size: 3.0, opacity: 0.7, map: nebTex }));
+  }
+
+  function buildDust() {
+    // cold dust: thin layer, concentrated just inside the arm loci
+    const nArm = 12000, nSmooth = 5000;
+    const n = nArm + nSmooth;
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    let i = 0;
+    for (let j = 0; j < nArm * 3 && i < nArm; j++) {
+      const a = ARMS[Math.floor(rnd() * ARMS.length)];
+      const p = sampleArm(a, 300, 45, -220); // offset toward the galactic center side
+      if (!p) continue;
+      const R = Math.hypot(p[0], p[1]);
+      if (R > 14500) continue;
+      pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2];
+      col[i * 3] = 0.10 + rnd() * 0.05; col[i * 3 + 1] = 0.07 + rnd() * 0.03; col[i * 3 + 2] = 0.05 + rnd() * 0.02;
+      i++;
+    }
+    for (let j = 0; j < nSmooth; j++) {
+      const R = expDisk(3800, 15000);
+      const th = rnd() * 2 * Math.PI;
+      pos[i * 3] = R * Math.cos(th);
+      pos[i * 3 + 1] = R * Math.sin(th);
+      pos[i * 3 + 2] = gauss() * 55;
+      col[i * 3] = 0.09 + rnd() * 0.04; col[i * 3 + 1] = 0.065 + rnd() * 0.03; col[i * 3 + 2] = 0.05 + rnd() * 0.02;
+      i++;
+    }
+    const cloud = makeCloud(pos.subarray(0, i * 3), col.subarray(0, i * 3), {
+      size: 380, sizeAttenuation: true, map: dstTex,
+      blending: THREE.NormalBlending, opacity: 0.62
+    });
+    cloud.renderOrder = 5; // draw after the star glows so lanes darken them
+    addLayer('dust', cloud);
+  }
+
+  function buildBarBulge() {
+    // triaxial bar (gaussian ellipsoid rotated by BAR_ANGLE), old population
+    const nb = 14000;
+    const pos = new Float32Array(nb * 3), col = new Float32Array(nb * 3);
+    const ca = Math.cos(BAR_ANGLE), sa = Math.sin(BAR_ANGLE);
+    let i = 0;
+    for (let j = 0; j < nb * 4 && i < nb; j++) {
+      const a = gauss() * 1500, b = gauss() * 1050, c = gauss() * 720;
+      if (Math.abs(a) > BAR_HALF) continue;
+      pos[i * 3] = a * ca - b * sa;
+      pos[i * 3 + 1] = a * sa + b * ca;
+      pos[i * 3 + 2] = c;
+      const cc = vary(rnd() < 0.6 ? '#ffce8f' : '#ffb46e', 0.12, 0.2);
+      col[i * 3] = cc[0]; col[i * 3 + 1] = cc[1]; col[i * 3 + 2] = cc[2];
+      i++;
+    }
+    addLayer('bar', makeCloud(pos.subarray(0, i * 3), col.subarray(0, i * 3), { size: 1.9, opacity: 0.9 }));
+
+    // central bulge core
+    const nc = 6000;
+    const posC = new Float32Array(nc * 3), colC = new Float32Array(nc * 3);
+    for (let j = 0; j < nc; j++) {
+      const r = Math.abs(gauss()) * 620;
+      const th = rnd() * 2 * Math.PI, ph = Math.acos(2 * rnd() - 1);
+      posC[j * 3] = r * Math.sin(ph) * Math.cos(th);
+      posC[j * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+      posC[j * 3 + 2] = r * Math.cos(ph) * 0.62;
+      const cc = vary(rnd() < 0.5 ? '#ffe0b0' : '#ffc890', 0.1, 0.18);
+      colC[j * 3] = cc[0]; colC[j * 3 + 1] = cc[1]; colC[j * 3 + 2] = cc[2];
+    }
+    addLayer('bar', makeCloud(posC, colC, { size: 2.2, opacity: 0.85 }));
+
+    // soft additive glows: bulge + nucleus
+    const glow = (scale, color, op) => {
+      const m = new THREE.SpriteMaterial({ map: softTex, color, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false });
+      const s = new THREE.Sprite(m);
+      s.scale.set(scale, scale, 1);
+      return s;
+    };
+    addLayer('bar', glow(9500, 0xffd9a8, 0.10));
+    addLayer('bar', glow(2400, 0xfff0d0, 0.22));
+  }
+
+  function buildThickHalo() {
+    // thick disk
+    const nt = 4000, Rd = 3000;
+    const pos = new Float32Array(nt * 3), col = new Float32Array(nt * 3);
+    for (let i = 0; i < nt; i++) {
+      const R = expDisk(Rd, 14000);
+      const th = rnd() * 2 * Math.PI;
+      pos[i * 3] = R * Math.cos(th);
+      pos[i * 3 + 1] = R * Math.sin(th);
+      pos[i * 3 + 2] = gauss() * 900;
+      const c = vary('#d8a880', 0.15, 0.2);
+      col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+    }
+    addLayer('thick', makeCloud(pos, col, { size: 1.6, opacity: 0.4 }));
+
+    // stellar halo: power-law rho ~ r^-3.5, mildly flattened
+    const nh = 2600;
+    const posH = new Float32Array(nh * 3), colH = new Float32Array(nh * 3);
+    for (let i = 0; i < nh; i++) {
+      let r;
+      do { r = 2000 * Math.pow(rnd(), -1 / 2.5); } while (r > 42000);
+      const th = rnd() * 2 * Math.PI, ph = Math.acos(2 * rnd() - 1);
+      posH[i * 3] = r * Math.sin(ph) * Math.cos(th);
+      posH[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+      posH[i * 3 + 2] = r * Math.cos(ph) * 0.8;
+      const c = vary('#aab4cc', 0.15, 0.25);
+      colH[i * 3] = c[0]; colH[i * 3 + 1] = c[1]; colH[i * 3 + 2] = c[2];
+    }
+    addLayer('halo', makeCloud(posH, colH, { size: 1.5, opacity: 0.35 }));
+  }
+
+  /* ---------------- coordinate conversions ---------------- */
+  // heliocentric galactic (l [deg], b [deg], d [pc]) -> galactocentric [x,y,z] pc
+  function lbToGC(lDeg, bDeg, dPc) {
+    const l = lDeg * D, b = bDeg * D;
+    return [
+      R0 - dPc * Math.cos(b) * Math.cos(l),
+      dPc * Math.cos(b) * Math.sin(l),
+      SUN_Z + dPc * Math.sin(b)
+    ];
+  }
+  // equatorial J2000 (ra [deg], dec [deg], d [pc]) -> galactocentric [x,y,z] pc
+  function eqToGC(raDeg, decDeg, dPc) {
+    const ngpRa = 192.859508 * D, ngpDec = 27.128336 * D, lNCP = 122.932 * D;
+    const ra = raDeg * D, dec = decDeg * D;
+    const b = Math.asin(
+      Math.sin(dec) * Math.sin(ngpDec) + Math.cos(dec) * Math.cos(ngpDec) * Math.cos(ngpRa - ra));
+    const l = lNCP - Math.atan2(
+      Math.cos(dec) * Math.sin(ngpRa - ra),
+      Math.sin(dec) * Math.cos(ngpDec) - Math.cos(dec) * Math.sin(ngpDec) * Math.cos(ngpRa - ra));
+    return lbToGC(l / D, b / D, dPc);
+  }
+  const hms = (h, m, s) => (h + m / 60 + s / 3600) * 15;
+  const dms = (sgn, d, m) => sgn * (d + m / 60);
+
+  /* ---------------- globular clusters ---------------- */
+  // Named clusters: [label, l, b, distance kpc] — Harris catalog (1996, 2010 ed.), rounded
+  const CLUSTERS = [
+    ['ω Centauri', 309.10, 14.97, 5.2], ['47 Tucanae', 305.90, -44.89, 4.5],
+    ['M13', 59.01, 40.91, 7.1], ['M22', 9.89, -7.55, 3.2],
+    ['M4', 350.97, 15.97, 2.2], ['M5', 3.86, 46.80, 7.5],
+    ['M15', 65.01, -27.31, 10.4], ['M92', 68.34, 34.86, 8.0],
+    ['M3', 42.22, 78.71, 10.2], ['NGC 6397', 338.17, -11.96, 2.3],
+    ['NGC 2808', 282.19, -11.25, 9.6], ['M10', 15.14, 23.08, 4.4],
+    ['M2', 53.38, -35.78, 11.5], ['M30', 27.18, -46.84, 8.1],
+  ];
+  const clusterLabels = [];
+  function buildClusters() {
+    const named = CLUSTERS.length, extra = 136; // ~150 known clusters in total
+    const n = named + extra;
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    for (let i = 0; i < named; i++) {
+      const p = lbToGC(CLUSTERS[i][1], CLUSTERS[i][2], CLUSTERS[i][3] * 1000);
+      pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2];
+      col[i * 3] = 1.0; col[i * 3 + 1] = 0.92; col[i * 3 + 2] = 0.72;
+      if (i < 10) clusterLabels.push({ name: CLUSTERS[i][0], pos: p, cls: 'cluster', min: 0, max: 60000, layer: 'gc' });
+      regObj(CLUSTERS[i][0], 'globular cluster', p, 250);
+    }
+    // statistical fill-in for the rest of the halo system: rho ~ r^-2.7, 1.5–40 kpc
+    for (let i = named; i < n; i++) {
+      let r;
+      do { r = 1500 * Math.pow(rnd(), -1 / 1.7); } while (r > 40000);
+      const th = rnd() * 2 * Math.PI, ph = Math.acos(2 * rnd() - 1);
+      pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+      pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+      pos[i * 3 + 2] = r * Math.cos(ph);
+      const c = vary('#e8d8a8', 0.1, 0.25);
+      col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+    }
+    addLayer('gc', makeCloud(pos, col, { size: 3.0, opacity: 0.95 }));
+  }
+
+  /* ---------------- satellite galaxies ---------------- */
+  // [label, l, b, distance kpc] — McConnachie 2012; LMC: Pietrzynski+ 2019; SMC: Graczyk+ 2020
+  const SATELLITES = [
+    { name: 'Large Magellanic Cloud', l: 280.47, b: -32.89, d: 49.6, n: 1300, r: 2600, bright: 1.0 },
+    { name: 'Small Magellanic Cloud', l: 302.81, b: -44.33, d: 62.0, n: 700, r: 1600, bright: 0.9 },
+    { name: 'Sagittarius dSph', l: 5.61, b: -14.05, d: 26.5, n: 300, r: 1500, bright: 0.4 },
+    { name: 'Carina dSph', l: 260.10, b: -22.22, d: 106, n: 90, r: 600, bright: 0.3 },
+    { name: 'Draco dSph', l: 86.37, b: 34.72, d: 82, n: 90, r: 500, bright: 0.3 },
+    { name: 'Ursa Minor dSph', l: 104.95, b: 44.92, d: 76, n: 90, r: 500, bright: 0.3 },
+    { name: 'Sculptor dSph', l: 287.72, b: -83.16, d: 86, n: 110, r: 700, bright: 0.3 },
+    { name: 'Fornax dSph', l: 237.48, b: -65.65, d: 147, n: 130, r: 900, bright: 0.32 },
+    { name: 'Sextans dSph', l: 243.50, b: 42.27, d: 89, n: 80, r: 600, bright: 0.28 },
+    { name: 'Leo I dSph', l: 225.98, b: 49.11, d: 254, n: 80, r: 500, bright: 0.28 },
+    { name: 'Leo II dSph', l: 220.17, b: 67.22, d: 233, n: 80, r: 450, bright: 0.28 },
+  ];
+  const satLabels = [];
+  function buildSatellites() {
+    for (const s of SATELLITES) {
+      const c = lbToGC(s.l, s.b, s.d * 1000);
+      const pos = new Float32Array(s.n * 3), col = new Float32Array(s.n * 3);
+      const disk = s.bright > 0.5; // the Clouds get a flattened irregular disk
+      for (let i = 0; i < s.n; i++) {
+        let x, y, z;
+        if (disk) {
+          const r = Math.abs(gauss()) * s.r * 0.55;
+          const th = rnd() * 2 * Math.PI;
+          x = r * Math.cos(th); y = r * Math.sin(th) * 0.6; z = gauss() * s.r * 0.12;
+          if (rnd() < 0.35) { x = (rnd() - 0.5) * s.r * 1.2; y = gauss() * s.r * 0.15; } // bar-ish
+        } else {
+          const r = Math.abs(gauss()) * s.r * 0.6;
+          const th = rnd() * 2 * Math.PI, ph = Math.acos(2 * rnd() - 1);
+          x = r * Math.sin(ph) * Math.cos(th); y = r * Math.sin(ph) * Math.sin(th); z = r * Math.cos(ph);
+        }
+        pos[i * 3] = c[0] + x; pos[i * 3 + 1] = c[1] + y; pos[i * 3 + 2] = c[2] + z;
+        const cc = vary(rnd() < 0.7 ? '#dfe8ff' : (rnd() < 0.5 ? '#ff9fb8' : '#ffd9a8'), 0.15, 0.2);
+        col[i * 3] = cc[0]; col[i * 3 + 1] = cc[1]; col[i * 3 + 2] = cc[2];
+      }
+      addLayer('sats', makeCloud(pos, col, { size: 2.0, opacity: 0.8 * s.bright }));
+      const gm = new THREE.SpriteMaterial({ map: softTex, color: 0xcfd8ff, transparent: true, opacity: 0.22 * s.bright, blending: THREE.AdditiveBlending, depthWrite: false });
+      const gs = new THREE.Sprite(gm);
+      gs.position.set(c[0], c[1], c[2]);
+      gs.scale.set(s.r * 3.2, s.r * 3.2, 1);
+      addLayer('sats', gs);
+      satLabels.push({ name: s.name, pos: c, cls: 'sat', min: 0, max: 3e6, layer: 'sats' });
+      const alias = s.name === 'Large Magellanic Cloud' ? 'LMC' : s.name === 'Small Magellanic Cloud' ? 'SMC' : '';
+      regObj(s.name, 'satellite galaxy', c, s.r > 2500 ? 14000 : s.r > 1500 ? 9000 : 3500, alias);
+    }
+  }
+
+  /* ---------------- notable stars (solar neighborhood) ---------------- */
+  // [name, RA h m s, Dec sign d m, dist ly, color] — Gaia/Hipparcos via SIMBAD, rounded
+  const STARS = [
+    ['Alpha Centauri', hms(14, 39, 36), dms(-1, 60, 50), 4.37, '#ffd27f'],
+    ['Sirius', hms(6, 45, 9), dms(-1, 16, 43), 8.66, '#cfe4ff'],
+    ["Barnard's Star", hms(17, 57, 48), dms(1, 4, 42), 5.96, '#ff9a7a'],
+    ['Procyon', hms(7, 39, 18), dms(1, 5, 13), 11.5, '#fff3d8'],
+    ['Tau Ceti', hms(1, 44, 4), dms(-1, 15, 56), 11.9, '#ffd27f'],
+    ['Epsilon Eridani', hms(3, 32, 56), dms(-1, 9, 27), 10.5, '#ffb46e'],
+    ['Vega', hms(18, 36, 56), dms(1, 38, 47), 25.0, '#cfe4ff'],
+    ['Arcturus', hms(14, 15, 40), dms(1, 19, 11), 36.7, '#ffb46e'],
+    ['Capella', hms(5, 16, 41), dms(1, 45, 59), 42.9, '#ffe9b0'],
+    ['Hyades (cluster)', hms(4, 27, 0), dms(1, 16, 0), 153, '#ffd9a8'],
+    ['Aldebaran', hms(4, 35, 55), dms(1, 16, 31), 65, '#ff9a5a'],
+    ['Pleiades', hms(3, 47, 24), dms(1, 24, 7), 444, '#a8c8ff'],
+    ['Polaris', hms(2, 31, 49), dms(1, 89, 16), 433, '#fff3d8'],
+    ['Antares', hms(16, 29, 24), dms(-1, 26, 26), 550, '#ff6a4d'],
+    ['Betelgeuse', hms(5, 55, 10), dms(1, 7, 24), 550, '#ff7a4d'],
+    ['Rigel', hms(5, 14, 32), dms(-1, 8, 12), 860, '#a8c8ff'],
+  ];
+  const starLabels = [];
+  function buildStars() {
+    const n = STARS.length;
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    STARS.forEach((s, i) => {
+      const p = eqToGC(s[1], s[2], s[3] / LY);
+      pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2];
+      _c.set(s[4]);
+      col[i * 3] = _c.r; col[i * 3 + 1] = _c.g; col[i * 3 + 2] = _c.b;
+      starLabels.push({ name: s[0], pos: p, cls: 'star', min: 0, max: 1600, layer: 'stars' });
+      regObj(s[0], /cluster|Pleiades/.test(s[0]) ? 'open cluster' : 'star', p, 150);
+    });
+    addLayer('stars', makeCloud(pos, col, { size: 4.0, opacity: 1.0 }));
+  }
+
+  /* ---------------- named nebulae & exotic objects ---------------- */
+  // [name, RA, Dec, dist ly, color, type] — equatorial J2000, distances rounded
+  const NEBULAE = [
+    ['Orion Nebula (M42)', hms(5, 35, 17), dms(-1, 5, 23), 1344, '#ff9fc0', 'H II region'],
+    ['Lagoon Nebula (M8)', hms(18, 3, 37), dms(-1, 24, 23), 4100, '#ff8fb0', 'H II region'],
+    ['Omega Nebula (M17)', hms(18, 20, 26), dms(-1, 16, 11), 5500, '#ff8fb0', 'H II region'],
+    ['Eagle Nebula (M16)', hms(18, 18, 48), dms(-1, 13, 49), 6500, '#ff9fc0', 'H II region'],
+    ['Carina Nebula', hms(10, 45, 8), dms(-1, 59, 52), 7500, '#ffb0c8', 'H II region'],
+    ['Ring Nebula (M57)', hms(18, 53, 35), dms(1, 33, 2), 2570, '#a0e8d8', 'planetary nebula'],
+    ['Crab Nebula (M1)', hms(5, 34, 32), dms(1, 22, 1), 6500, '#b0d8ff', 'supernova remnant'],
+    ['Tarantula Nebula (30 Dor)', hms(5, 38, 38), dms(-1, 69, 6), 160000, '#ff9fc0', 'H II region (in the LMC)'],
+    ['Cygnus X-1', hms(19, 58, 22), dms(1, 35, 12), 7200, '#e8e8ff', 'black hole (X-ray binary)'],
+    ['VY Canis Majoris', hms(7, 22, 58), dms(-1, 25, 46), 3900, '#ff8a5a', 'red hypergiant'],
+  ];
+  function buildNamedNebulae() {
+    const n = NEBULAE.length;
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    NEBULAE.forEach((s, i) => {
+      const p = eqToGC(s[1], s[2], s[3] / LY);
+      pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2];
+      _c.set(s[4]);
+      col[i * 3] = _c.r; col[i * 3 + 1] = _c.g; col[i * 3 + 2] = _c.b;
+      const dSol = Math.hypot(p[0] - SUN_POS[0], p[1] - SUN_POS[1], p[2] - SUN_POS[2]);
+      starLabels.push({ name: s[0], pos: p, cls: 'neb', min: 0, max: dSol > 30000 ? 6e5 : 18000, layer: 'stars' });
+      regObj(s[0], s[5], p, dSol > 30000 ? 4000 : 350);
+    });
+    addLayer('stars', makeCloud(pos, col, { size: 5.0, opacity: 0.95, map: softTex }));
+  }
+
+  /* ---------------- special markers: Sun, Sgr A* ---------------- */
+  const SUN_POS = [R0, 0, SUN_Z];
+  function buildMarkers() {
+    const sunPos = new Float32Array(SUN_POS);
+    const sunCol = new Float32Array([1.0, 0.91, 0.66]);
+    addLayer('sun', makeCloud(sunPos, sunCol, { size: 5.5, opacity: 1.0 }));
+    const sm = new THREE.SpriteMaterial({ map: softTex, color: 0xffedb8, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false });
+    const ss = new THREE.Sprite(sm);
+    ss.position.set(SUN_POS[0], SUN_POS[1], SUN_POS[2]);
+    ss.scale.set(24, 24, 1);
+    addLayer('sun', ss);
+    regObj('Sun', 'G-type main-sequence star', SUN_POS, 80, 'sol, the sun');
+
+    const gcPos = new Float32Array([0, 0, 0]);
+    const gcCol = new Float32Array([1, 1, 1]);
+    addLayer('sgra', makeCloud(gcPos, gcCol, { size: 5, opacity: 1.0 }));
+    const gm = new THREE.SpriteMaterial({ map: softTex, color: 0xfff3d0, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+    const gs = new THREE.Sprite(gm);
+    gs.scale.set(650, 650, 1);
+    addLayer('sgra', gs);
+    regObj('Sagittarius A*', 'supermassive black hole', [0, 0, 0], 1500, 'sgr a*, galactic center, gc');
+  }
+
+  /* ---------------- scale rings & axes ---------------- */
+  function buildRings() {
+    const ringRadii = [5000, 10000, 15000];
+    const grp = new THREE.Group();
+    for (const r of ringRadii) {
+      const seg = 160;
+      const arr = new Float32Array(seg * 3);
+      for (let i = 0; i < seg; i++) {
+        const th = i / seg * 2 * Math.PI;
+        arr[i * 3] = r * Math.cos(th);
+        arr[i * 3 + 1] = r * Math.sin(th);
+        arr[i * 3 + 2] = 0;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+      const m = new THREE.LineBasicMaterial({ color: 0x27395a, transparent: true, opacity: 0.85, depthWrite: false });
+      grp.add(new THREE.LineLoop(g, m));
+    }
+    // Sun <-> center reference line
+    const lg = new THREE.BufferGeometry();
+    lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0, SUN_POS[0], SUN_POS[1], SUN_POS[2]]), 3));
+    grp.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x33507a, transparent: true, opacity: 0.9, depthWrite: false })));
+    addLayer('rings', grp);
+  }
+
+  /* ---------------- labels ---------------- */
+  const labelRoot = document.getElementById('labels');
+  const allLabels = [];
+  function addLabel(name, pos, cls, min, max, layer) {
+    const el = document.createElement('div');
+    el.className = 'wl ' + cls;
+    el.textContent = name;
+    labelRoot.appendChild(el);
+    allLabels.push({ el, v: new THREE.Vector3(pos[0], pos[1], pos[2]), min: min || 0, max: max || Infinity, layer: layer || null });
+  }
+  function buildLabels() {
+    addLabel('Sgr A* — Galactic Center', [0, 0, -450], 'major', 0, 4e6);
+    addLabel('Galactic bar', [BAR_HALF * 0.95 * Math.cos(BAR_ANGLE), BAR_HALF * 0.95 * Math.sin(BAR_ANGLE), 850], '', 3000, 200000);
+    addLabel('Sun', SUN_POS, 'major', 0, 4e6);
+    // arm labels at readable spots along each arm (z offsets separate them edge-on)
+    const armLabelAt = (arm, th, z) => {
+      const p = armPoint(arm, th);
+      p[2] = z || 0;
+      addLabel(arm.name, p, 'arm', 7000, 90000, 'arms');
+    };
+    armLabelAt(ARMS[0], -185, 0);   // Outer arm, anticenter side
+    armLabelAt(ARMS[1], -100, -600);
+    armLabelAt(ARMS[2], 80, 600);
+    armLabelAt(ARMS[3], -50, 0);    // Perseus/Taurus side
+    armLabelAt(SPUR, -25, 300);
+    for (const c of clusterLabels) addLabel(c.name, c.pos, c.cls, c.min, c.max, c.layer);
+    for (const s of satLabels) addLabel(s.name, s.pos, s.cls, s.min, s.max, s.layer);
+    for (const s of starLabels) addLabel(s.name, s.pos, s.cls, s.min, s.max, s.layer);
+    // ring labels (placed at -50 deg, slightly below the plane, to stay clear in any view)
+    const rl = (r) => [r * Math.cos(-50 * D), r * Math.sin(-50 * D), -1200];
+    addLabel('5 kpc ≈ 16k ly', rl(5000), 'ring', 0, 90000, 'rings');
+    addLabel('10 kpc ≈ 33k ly', rl(10000), 'ring', 0, 90000, 'rings');
+    addLabel('15 kpc ≈ 49k ly', rl(15000), 'ring', 0, 90000, 'rings');
+  }
+
+  const _proj = new THREE.Vector3();
+  const _camDir = new THREE.Vector3();
+  const _toPt = new THREE.Vector3();
+  function updateLabels() {
+    const w = window.innerWidth, h = window.innerHeight;
+    camera.getWorldDirection(_camDir);
+    const showAll = document.getElementById('t-labels').checked;
+    for (const L of allLabels) {
+      let vis = showAll && (!L.layer || layerOn(L.layer));
+      if (vis) {
+        _toPt.copy(L.v).sub(camera.position);
+        const dist = _toPt.length();
+        if (_toPt.dot(_camDir) <= 0 || dist < L.min || dist > L.max) vis = false;
+      }
+      if (!vis) { L.el.style.opacity = '0'; L.el.style.visibility = 'hidden'; continue; }
+      _proj.copy(L.v).project(camera);
+      L.el.style.left = ((_proj.x * 0.5 + 0.5) * w) + 'px';
+      L.el.style.top = ((-_proj.y * 0.5 + 0.5) * h) + 'px';
+      L.el.style.visibility = 'visible';
+      L.el.style.opacity = '1';
+    }
+  }
+  function layerOn(name) {
+    const map = { arms: 't-arms', gc: 't-gc', sats: 't-sats', stars: 't-stars', rings: 't-rings' };
+    const id = map[name];
+    return id ? document.getElementById(id).checked : true;
+  }
+
+  /* ---------------- camera controls (orbit / pan / zoom) ---------------- */
+  const controls = {
+    goal: { tx: 0, ty: 0, tz: 0, lr: Math.log(34000), th: 0.9, ph: 0.25 },
+    cur: { tx: 0, ty: 0, tz: 0, lr: Math.log(34000), th: 0.9, ph: 0.25 },
+    lastInput: 0,
+  };
+  function applyCamera() {
+    const c = controls.cur;
+    const r = Math.exp(c.lr);
+    const sp = Math.sin(c.ph), cp = Math.cos(c.ph);
+    camera.position.set(
+      c.tx + r * sp * Math.cos(c.th),
+      c.ty + r * sp * Math.sin(c.th),
+      c.tz + r * cp
+    );
+    camera.lookAt(c.tx, c.ty, c.tz);
+  }
+  function setupControls(dom) {
+    const MIN_R = 0.3, MAX_R = 1.4e6;
+    const pointers = new Map();
+    let mode = 'rotate';
+    let pinchD = 0, pinchCx = 0, pinchCy = 0;
+
+    dom.addEventListener('contextmenu', e => e.preventDefault());
+    dom.addEventListener('pointerdown', e => {
+      dom.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      mode = (e.button === 2 || e.shiftKey || e.ctrlKey) ? 'pan' : 'rotate';
+      if (pointers.size === 2) {
+        const ps = [...pointers.values()];
+        pinchD = Math.hypot(ps[0].x - ps[1].x, ps[0].y - ps[1].y);
+        pinchCx = (ps[0].x + ps[1].x) / 2; pinchCy = (ps[0].y + ps[1].y) / 2;
+      }
+      controls.lastInput = performance.now();
+    });
+    dom.addEventListener('pointermove', e => {
+      if (!pointers.has(e.pointerId)) return;
+      const prev = pointers.get(e.pointerId);
+      const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      controls.lastInput = performance.now();
+
+      if (pointers.size === 2) {
+        const ps = [...pointers.values()];
+        const nd = Math.hypot(ps[0].x - ps[1].x, ps[0].y - ps[1].y);
+        const ncx = (ps[0].x + ps[1].x) / 2, ncy = (ps[0].y + ps[1].y) / 2;
+        if (pinchD > 0) controls.goal.lr = clamp(Math.log(MIN_R), Math.log(MAX_R), controls.goal.lr - Math.log(nd / pinchD) * 1.1);
+        panBy(ncx - pinchCx, ncy - pinchCy);
+        pinchD = nd; pinchCx = ncx; pinchCy = ncy;
+        return;
+      }
+      if (mode === 'pan') panBy(dx, dy);
+      else {
+        controls.goal.th += dx * 0.0052;
+        controls.goal.ph = clamp(0.02, Math.PI - 0.02, controls.goal.ph - dy * 0.0052);
+      }
+    });
+    const end = e => { pointers.delete(e.pointerId); pinchD = 0; };
+    dom.addEventListener('pointerup', end);
+    dom.addEventListener('pointercancel', end);
+
+    dom.addEventListener('wheel', e => {
+      e.preventDefault();
+      const f = Math.exp((e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY) * 0.0011);
+      controls.goal.lr = clamp(Math.log(MIN_R), Math.log(MAX_R), controls.goal.lr + Math.log(f));
+      controls.lastInput = performance.now();
+    }, { passive: false });
+
+    dom.addEventListener('dblclick', e => {
+      // focus the point where the ray meets the galactic plane
+      const r = Math.exp(controls.goal.lr);
+      const nx = (e.clientX / window.innerWidth) * 2 - 1;
+      const ny = -(e.clientY / window.innerHeight) * 2 + 1;
+      const v = new THREE.Vector3(nx, ny, 0.5).unproject(camera).sub(camera.position).normalize();
+      if (Math.abs(v.z) < 1e-6) return;
+      const t = -camera.position.z / v.z;
+      if (t <= 0) return;
+      controls.goal.tx = camera.position.x + v.x * t;
+      controls.goal.ty = camera.position.y + v.y * t;
+      controls.goal.tz = 0;
+      controls.goal.lr = Math.min(controls.goal.lr, Math.log(6000));
+    });
+
+    function panBy(dx, dy) {
+      const r = Math.exp(controls.goal.lr);
+      const s = r * 0.0016;
+      const fwd = new THREE.Vector3();
+      camera.getWorldDirection(fwd);
+      const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 0, 1));
+      if (right.lengthSq() < 1e-9) right.set(1, 0, 0); else right.normalize();
+      const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+      controls.goal.tx -= right.x * dx * s - up.x * dy * s;
+      controls.goal.ty -= right.y * dx * s - up.y * dy * s;
+      controls.goal.tz -= right.z * dx * s - up.z * dy * s;
+    }
+  }
+  function clamp(a, b, x) { return Math.max(a, Math.min(b, x)); }
+
+  /* ---------------- view presets ---------------- */
+  function goTo(tx, ty, tz, r, th, ph) {
+    Object.assign(controls.goal, { tx, ty, tz, lr: Math.log(r), th, ph });
+  }
+  function setupViews() {
+    document.getElementById('v-face').onclick = () => goTo(0, 0, 0, 34000, 0.9, 0.12);
+    document.getElementById('v-edge').onclick = () => goTo(0, 0, 0, 30000, Math.PI / 2, 1.52);
+    document.getElementById('v-sun').onclick = () => goTo(SUN_POS[0], SUN_POS[1], SUN_POS[2], 110, 2.2, 0.9);
+    document.getElementById('v-full').onclick = () => goTo(0, 0, 0, 260000, 3.6, 0.75);
+  }
+
+  /* ---------------- layer toggles ---------------- */
+  function setLayer(name, on) {
+    for (const o of (layers[name] || [])) o.visible = on;
+  }
+  function setupToggles() {
+    const bind = (id, layerNames) => {
+      const el = document.getElementById(id);
+      const apply = () => layerNames.forEach(n => setLayer(n, el.checked));
+      el.addEventListener('change', apply);
+      apply();
+    };
+    bind('t-rings', ['rings']);
+    bind('t-arms', ['arms']);
+    bind('t-dust', ['dust']);
+    bind('t-hii', ['hii']);
+    bind('t-gc', ['gc']);
+    bind('t-sats', ['sats']);
+    bind('t-stars', ['stars']);
+  }
+
+  /* ---------------- HUD ---------------- */
+  const hudDist = document.getElementById('hud-dist');
+  function fmtDist(pc) {
+    if (pc < 950) return pc.toFixed(pc < 10 ? 1 : 0) + ' pc (' + Math.round(pc * LY) + ' ly)';
+    const kpc = pc / 1000;
+    return (kpc < 10 ? kpc.toFixed(2) : kpc < 100 ? kpc.toFixed(1) : Math.round(kpc)) +
+      ' kpc (' + Math.round(kpc * 1000 * LY / 1000) + 'k ly)';
+  }
+
+  /* ---------------- object catalog: search & locate ---------------- */
+  const OBJECTS = []; // {name, type, pos:[x,y,z], viewR, alias}
+  function regObj(name, type, pos, viewR, alias) {
+    OBJECTS.push({ name, type, pos, viewR, alias: alias || '' });
+  }
+  // galactic structures, registered at their label anchors
+  const armPos = (arm, th) => { const p = armPoint(arm, th); return [p[0], p[1], 0]; };
+  regObj('Norma–Outer arm', 'spiral arm', armPos(ARMS[0], -185), 8000, 'norma, outer arm, cygnus');
+  regObj('Scutum–Centaurus arm', 'spiral arm', armPos(ARMS[1], -100), 8000, 'scutum, crux, centaurus');
+  regObj('Sagittarius–Carina arm', 'spiral arm', armPos(ARMS[2], 80), 8000, 'sagittarius, carina');
+  regObj('Perseus arm', 'spiral arm', armPos(ARMS[3], -50), 8000, 'perseus');
+  regObj('Orion Spur', 'spiral arm segment', armPos(SPUR, -25), 4000, 'local arm, orion arm');
+  regObj('Galactic bar', 'central bar', [BAR_HALF * 0.5 * Math.cos(BAR_ANGLE), BAR_HALF * 0.5 * Math.sin(BAR_ANGLE), 0], 6000, 'bar');
+
+  const distSol = (p) => Math.hypot(p[0] - SUN_POS[0], p[1] - SUN_POS[1], p[2] - SUN_POS[2]);
+  function fmtLy(pc) { // distance from Sol, in light units
+    const ly = pc * LY;
+    if (ly < 950) return Math.round(ly) + ' ly';
+    if (ly < 9500) return (Math.round(ly / 100) / 10) + 'k ly';
+    return Math.round(ly / 1000) + 'k ly';
+  }
+  function fmtKpc(pc) {
+    const k = pc / 1000;
+    return (k < 10 ? k.toFixed(2) : k < 100 ? k.toFixed(1) : Math.round(k)) + ' kpc';
+  }
+
+  // pulsing locator ring shown at the located object
+  const ringTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.strokeStyle = 'rgba(255,255,255,0.95)';
+    g.lineWidth = 5;
+    g.beginPath(); g.arc(64, 64, 52, 0, 7); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.35)';
+    g.lineWidth = 12;
+    g.beginPath(); g.arc(64, 64, 52, 0, 7); g.stroke();
+    return new THREE.CanvasTexture(c);
+  })();
+  let ring = null, ringT0 = 0;
+  function markRing(pos, viewR) {
+    if (!ring) {
+      ring = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: ringTex, color: 0x7fe8ff, transparent: true, opacity: 0.95,
+        depthWrite: false, depthTest: false
+      }));
+      ring.renderOrder = 20;
+      scene.add(ring);
+    }
+    ring.position.set(pos[0], pos[1], pos[2]);
+    ring.userData.base = Math.max(viewR * 0.25, 8);
+    ring.visible = true;
+    ringT0 = performance.now();
+  }
+  function updateRing(now) {
+    if (!ring || !ring.visible) return;
+    const age = (now - ringT0) / 1000;
+    if (age > 6) { ring.visible = false; return; }
+    const s = ring.userData.base * (1 + 0.12 * Math.sin(now / 230));
+    ring.scale.set(s, s, 1);
+    ring.material.opacity = age < 4 ? 0.95 : 0.95 * (1 - (age - 4) / 2);
+  }
+
+  const objInfo = document.getElementById('obj-info');
+  const objInfoText = document.getElementById('oi-text');
+  function locateObj(o) {
+    goTo(o.pos[0], o.pos[1], o.pos[2], o.viewR, controls.goal.th, controls.goal.ph);
+    markRing(o.pos, o.viewR);
+    objInfoText.innerHTML = '<b>' + o.name + '</b> &middot; ' + o.type +
+      ' &middot; ' + fmtLy(distSol(o.pos)) + ' from Sol &middot; ' + fmtKpc(Math.hypot(o.pos[0], o.pos[1], o.pos[2])) + ' from the Galactic Center';
+    objInfo.style.display = 'flex';
+  }
+  document.getElementById('oi-close').addEventListener('click', () => { objInfo.style.display = 'none'; });
+
+  function setupSearch() {
+    const searchEl = document.getElementById('search');
+    const resEl = document.getElementById('results');
+    const render = (q) => {
+      q = q.trim().toLowerCase();
+      const matches = OBJECTS
+        .filter(o => !q ||
+          o.name.toLowerCase().includes(q) ||
+          o.alias.toLowerCase().includes(q) ||
+          o.type.toLowerCase().includes(q))
+        .map(o => ({ o, d: distSol(o.pos) }))
+        .sort((a, b) => a.d - b.d);
+      resEl.innerHTML = '';
+      if (q && matches.length === 0) {
+        resEl.innerHTML = '<div class="res-none">no matches</div>';
+        return;
+      }
+      for (const { o, d } of matches.slice(0, 100)) {
+        const row = document.createElement('div');
+        row.className = 'res-row';
+        row.innerHTML = '<span class="res-name">' + o.name + '<span class="res-type">' + o.type +
+          '</span></span><span class="res-meta">' + fmtLy(d) + '</span>';
+        row.addEventListener('click', () => { locateObj(o); searchEl.blur(); });
+        resEl.appendChild(row);
+      }
+    };
+    searchEl.addEventListener('input', e => render(e.target.value));
+    searchEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { const r = resEl.querySelector('.res-row'); if (r) r.click(); }
+      if (e.key === 'Escape') searchEl.blur();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === '/' && document.activeElement !== searchEl && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+        e.preventDefault();
+        searchEl.focus();
+      }
+    });
+    render('');
+  }
+
+  /* ---------------- build & run ---------------- */
+  buildDiskStars();
+  buildArmStars();
+  buildNebulae();
+  buildDust();
+  buildBarBulge();
+  buildThickHalo();
+  buildClusters();
+  buildSatellites();
+  buildStars();
+  buildNamedNebulae();
+  buildMarkers();
+  buildRings();
+  buildLabels();
+  setupControls(canvas);
+  setupViews();
+  setupToggles();
+  setupSearch();
+
+  document.getElementById('panel-toggle').addEventListener('click', () => {
+    document.body.classList.remove('panel-collapsed');
+  });
+  if (window.innerWidth < 700) {
+    // small screens: start with the panel as an overlay the user can dismiss by tapping outside
+    const collapse = e => {
+      if (!document.getElementById('ui').contains(e.target) && e.target.id !== 'panel-toggle') {
+        document.body.classList.add('panel-collapsed');
+        window.removeEventListener('pointerdown', collapse);
+      }
+    };
+    setTimeout(() => window.addEventListener('pointerdown', collapse), 400);
+  }
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // fade big-structure layers when the camera dives into the solar neighborhood,
+  // so world-scale puffs don't swamp the view (they are kpc-scale constructs)
+  const _sunV = new THREE.Vector3(SUN_POS[0], SUN_POS[1], SUN_POS[2]);
+  function updateFades() {
+    const dSun = camera.position.distanceTo(_sunV);
+    const f = clamp(0, 1, (dSun - 1400) / 2600); // 0 at the Sun, 1 beyond ~4 kpc
+    for (const o of (layers.dust || [])) o.material.opacity = 0.62 * f;
+    for (const o of (layers.hii || [])) o.material.opacity = 0.7 * f;
+  }
+
+  let lastT = performance.now();
+  function animate() {
+    requestAnimationFrame(animate);
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+
+    if (document.getElementById('t-rot').checked && now - controls.lastInput > 3000) {
+      controls.goal.th += dt * 0.03;
+    }
+    // critically-damped-ish smoothing; zoom in log space for even pacing
+    const k = 1 - Math.exp(-dt * 7);
+    const c = controls.cur, g = controls.goal;
+    c.tx += (g.tx - c.tx) * k; c.ty += (g.ty - c.ty) * k; c.tz += (g.tz - c.tz) * k;
+    c.lr += (g.lr - c.lr) * k;
+    c.th += (g.th - c.th) * k;
+    c.ph += (g.ph - c.ph) * k;
+    applyCamera();
+
+    updateFades();
+    updateLabels();
+    updateRing(now);
+    const d = camera.position.distanceTo(new THREE.Vector3(c.tx, c.ty, c.tz));
+    hudDist.textContent = fmtDist(d);
+
+    renderer.render(scene, camera);
+  }
+  animate();
+  </script>
+</body>
+</html>

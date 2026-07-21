@@ -1,0 +1,2848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RelSim — Special Relativity Simulator</title>
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --panel: #121826;
+      --text: #e6e9f0;
+      --muted: #8a93a8;
+      --accent: #4aa3ff;
+      --accent2: #ff9f4a;
+      --earth: #3a7bd5;
+      --asteroid: #8b7355;
+      --ship: #e6f0ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 16px;
+    }
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; }
+    }
+    .viz-container {
+      position: relative;
+      background: #05070f;
+      border: 1px solid #1f2636;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      outline: none;
+    }
+
+    /* Prevent horizontal overflow on mobile */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+    .app {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    .main {
+      max-width: 100%;
+    }
+    .viz-container {
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    /* ====================== New nice clocks (outside viz) ====================== */
+    .clocks-panel {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 700px) {
+      .clocks-panel { grid-template-columns: 1fr; }
+    }
+
+    .clock-card {
+      background: var(--panel);
+      border: 1px solid #1f2636;
+      border-radius: 10px;
+      padding: 11px 13px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .clock-card.earth {
+      border-color: #254a75;
+    }
+    .clock-card.ship {
+      border-color: #5c4630;
+    }
+
+    .clock-header {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #a3adbf;
+      margin-bottom: 7px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1f2636;
+    }
+    .clock-header .icon {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+    }
+    .clock-card.earth .clock-header .icon { color: #6fa3e0; }
+    .clock-card.ship .clock-header .icon { color: #f0a35f; }
+
+    .clock-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin: 3.5px 0;
+    }
+    .clock-label {
+      font-size: 11.5px;
+      color: #7f8a9e;
+      white-space: nowrap;
+    }
+    .clock-value {
+      font-family: ui-monospace, Menlo, Monaco, Consolas, "SF Mono", monospace;
+      font-size: 16.5px;
+      font-weight: 700;
+      color: #f4f7fc;
+      letter-spacing: -0.3px;
+      text-align: right;
+      min-width: 72px;
+    }
+    .clock-value .unit {
+      font-size: 10.5px;
+      font-weight: 500;
+      color: #6b7689;
+      margin-left: 2px;
+    }
+    .clock-row.clock-local { align-items: center; }
+    .stepper { display: inline-flex; align-items: center; gap: 6px; }
+    .step-val {
+      font-family: ui-monospace, Menlo, Monaco, Consolas, "SF Mono", monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: #f4f7fc;
+      letter-spacing: -0.3px;
+      min-width: 54px;
+      text-align: center;
+    }
+    .step-val .unit { font-size: 10px; font-weight: 500; color: #6b7689; margin-left: 2px; }
+    .step-btn {
+      min-width: 22px;
+      height: 22px;
+      padding: 0 5px;
+      font-size: 13px;
+      line-height: 1;
+      background: #1f2636;
+      border: 1px solid #2a3448;
+      color: var(--text);
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s ease, border-color 0.1s ease;
+    }
+    .step-btn:hover { background: #2a3448; border-color: #4aa3ff; }
+    .step-btn:active { transform: translateY(1px); }
+    .controls {
+      background: var(--panel);
+      border: 1px solid #1f2636;
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    label.opt {
+      min-width: 0; display: inline-flex; align-items: center; gap: 6px;
+      cursor: pointer; color: var(--muted); font-size: 12px;
+    }
+    label.opt input { accent-color: var(--accent); }
+    label.opt.opt-disabled, label.opt:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+    .opt-label { min-width: 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+    .opt-note { font-size: 11px; opacity: 0.62; line-height: 1.45; }
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 70px;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+    }
+    input[type="number"] {
+      width: 78px;
+      background: #0a0e17;
+      border: 1px solid #2a3448;
+      color: var(--text);
+      padding: 4px 6px;
+      border-radius: 5px;
+      font-family: ui-monospace, monospace;
+    }
+    .info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 12px;
+      background: #0a0e17;
+      border-radius: 6px;
+      padding: 8px 10px;
+      border: 1px solid #1f2636;
+    }
+    .info > div {
+      display: flex;
+      white-space: nowrap;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .info .k { color: var(--muted); }
+    .info .v { font-family: ui-monospace, monospace; font-weight: 600; }
+    .buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .playback-rate {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: auto;
+    }
+    .playback-rate label {
+      font-size: 10px;
+    }
+    .playback-rate input[type="range"] {
+      width: 70px;
+      accent-color: var(--accent);
+    }
+    .playback-rate span {
+      min-width: 32px;
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+    }
+
+    .replay-btn {
+      margin-top: 8px;
+      width: 100%;
+      background: transparent;
+      border: 1px solid #3a4558;
+      color: #8a93a8;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+    .replay-btn:hover {
+      background: #2a3448;
+      color: #c5cad6;
+      border-color: #4aa3ff;
+    }
+    button {
+      background: #1f2636;
+      color: var(--text);
+      border: 1px solid #2a3448;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.1s ease;
+    }
+    button:hover { background: #2a3448; }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      background: var(--accent);
+      border-color: #2f6cb8;
+      color: white;
+    }
+    .legend {
+      display: flex;
+      gap: 14px;
+      font-size: 11px;
+      color: var(--muted);
+      padding-top: 4px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 3px;
+      border-radius: 2px;
+    }
+    .outbound { background: #4aa3ff; }
+    .return { background: #ff9f4a; }
+    .note {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .units {
+      font-size: 11px;
+      color: #6b7689;
+    }
+
+    /* ====================== Mobile responsiveness ====================== */
+    @media (max-width: 600px) {
+      .app {
+        padding: 8px;
+      }
+      .main {
+        gap: 8px;
+      }
+      header {
+        margin-bottom: 8px;
+      }
+      h1 {
+        font-size: 18px;
+      }
+      .subtitle {
+        font-size: 11px;
+      }
+      .units {
+        font-size: 10px;
+      }
+      .controls {
+        padding: 10px;
+        gap: 10px;
+      }
+      .control-row {
+        gap: 6px;
+      }
+      label {
+        font-size: 11px;
+        min-width: 60px;
+      }
+      input[type="number"] {
+        width: 64px;
+        padding: 3px 4px;
+        font-size: 12px;
+      }
+      .info {
+        font-size: 10px;
+        gap: 3px;
+        padding: 6px 8px;
+      }
+      .info .k {
+        font-size: 9px;
+      }
+      .buttons {
+        gap: 4px;
+      }
+      .playback-rate {
+        font-size: 10px;
+      }
+      .playback-rate input[type="range"] {
+        width: 60px;
+      }
+      .replay-btn {
+        font-size: 10px;
+        padding: 4px 6px;
+      }
+      button {
+        padding: 8px 10px;
+        font-size: 13px;
+        min-height: 40px;
+      }
+      .legend {
+        font-size: 10px;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .note {
+        font-size: 10px;
+      }
+      .clock-value {
+        font-size: 15px;
+      }
+      .clock-label {
+        font-size: 10.5px;
+      }
+      .legend .note {
+        flex-basis: 100%;
+        margin-top: 2px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .app {
+        padding: 6px;
+      }
+      .main {
+        gap: 6px;
+      }
+      h1 {
+        font-size: 16px;
+      }
+      .subtitle {
+        font-size: 10px;
+      }
+      .clock-value {
+        font-size: 14px;
+      }
+      button {
+        font-size: 12px;
+        padding: 7px 8px;
+      }
+      .info {
+        font-size: 9px;
+        gap: 2px;
+      }
+      .info .k {
+        font-size: 8px;
+      }
+      .legend {
+        font-size: 9px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      #label-earth, #label-asteroid {
+        font-size: 9px !important;
+      }
+      .legend .note {
+        flex-basis: 100%;
+        margin-top: 2px;
+      }
+      .units {
+        display: none;
+      }
+    }
+
+    /* Tour / Walkthrough highlight and popup */
+    .tour-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 7, 15, 0.55);
+      z-index: 997;
+      pointer-events: none; /* allow interaction with highlighted element + popup */
+      transition: opacity 0.2s ease;
+    }
+
+    .tour-highlight {
+      box-shadow: 0 0 0 3px #4aa3ff, 0 0 0 8px rgba(74, 163, 255, 0.3);
+      border-radius: 6px;
+      transition: box-shadow 0.15s ease;
+      z-index: 1001;
+      position: relative;
+    }
+
+    .tour-popup {
+      position: absolute;
+      z-index: 1002;
+      background: #121826;
+      color: #e6e9f0;
+      border: 1px solid #4aa3ff;
+      border-radius: 8px;
+      padding: 10px 12px;
+      max-width: 240px;
+      font-size: 13px;
+      line-height: 1.35;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+    }
+
+    .tour-popup h3 {
+      margin: 0 0 6px 0;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #a0d2ff;
+    }
+
+    .tour-popup .tour-text {
+      margin-bottom: 8px;
+      font-size: 12.5px;
+      color: #c5cad6;
+    }
+
+    .tour-popup .tour-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tour-popup .tour-skip {
+      background: none;
+      border: none;
+      color: #8a93a8;
+      font-size: 11px;
+      padding: 2px 4px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .tour-popup .tour-skip:hover {
+      color: #b0b8c8;
+    }
+
+    .tour-popup button {
+      background: #4aa3ff;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .tour-popup button:hover {
+      background: #3a8fd9;
+    }
+    .tour-popup button.secondary {
+      background: #2a3448;
+      color: #c5cad6;
+    }
+
+    /* Make sure highlighted elements stand out even inside the viz area */
+    .tour-highlight {
+      transition: box-shadow 0.2s ease;
+    }
+
+    /* ====================== 3D split-screen view ====================== */
+    .viz-split {
+      display: grid;
+      grid-template-columns: 1fr;
+      width: 100%;
+      gap: 8px;
+    }
+    .viz-split.split { grid-template-columns: 1fr 1fr; }
+    .viz-split.split.narrow { grid-template-columns: 1fr; grid-template-rows: auto auto; }
+    .viz-pane {
+      position: relative;
+      overflow: hidden;
+      border-radius: 10px;
+      background: #05070f;
+      border: 1px solid #1f2636;
+      min-height: 0;
+      min-width: 0;
+    }
+    /* canvases fill their pane; drawing buffer is set in JS */
+    .viz-pane canvas {
+      position: absolute !important;
+      inset: 0;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      display: block;
+      outline: none;
+    }
+    #viz-pane-3d { display: none; }
+    .viz-split.split #viz-pane-3d { display: block; }
+
+    .v3d-label {
+      position: absolute;
+      pointer-events: none;
+      user-select: none;
+      font-size: 10.5px;
+      color: #9fe8ff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.75);
+      white-space: nowrap;
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* Overlay buttons on the 2D view: 3D toggle (top-left), info (i) (top-right) */
+    .viz-mini-toggle, .viz-info {
+      position: absolute;
+      top: 8px;
+      z-index: 6;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(18, 24, 38, 0.72);
+      border: 1px solid #2a3448;
+      color: #a3adbf;
+      border-radius: 8px;
+      cursor: pointer;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+    }
+    .viz-mini-toggle { left: 8px; height: 30px; min-width: 30px; padding: 0 9px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+    .viz-info { right: 8px; width: 30px; height: 30px; padding: 0; }
+    .viz-mini-toggle:hover, .viz-info:hover { background: rgba(31, 38, 54, 0.92); color: #e6e9f0; border-color: #4aa3ff; }
+    .viz-mini-toggle:active, .viz-info:active { transform: translateY(1px); }
+    .viz-mini-toggle:focus-visible, .viz-info:focus-visible { outline: 2px solid #4aa3ff; outline-offset: 2px; }
+    .viz-mini-toggle.active { background: var(--accent); border-color: #2f6cb8; color: #fff; }
+    .viz-info svg { display: block; }
+
+    .viz-zoom-btn {
+      position: absolute;
+      right: 8px;
+      z-index: 6;
+      width: 30px; height: 30px;
+      display: none;
+      align-items: center; justify-content: center;
+      background: rgba(18, 24, 38, 0.72);
+      border: 1px solid #2a3448;
+      color: #a3adbf;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px; font-weight: 700; line-height: 1;
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+    }
+    .viz-zoom-btn:hover { background: rgba(31, 38, 54, 0.92); color: #e6e9f0; border-color: #4aa3ff; }
+    .viz-zoom-btn:active { transform: translateY(1px); }
+    .viz-zoom-btn:focus-visible { outline: 2px solid #4aa3ff; outline-offset: 2px; }
+    #btn-zoom-in { bottom: 40px; }
+    #btn-zoom-out { bottom: 8px; }
+
+    .viz-popover {
+      position: absolute;
+      top: 44px;
+      right: 8px;
+      z-index: 7;
+      width: min(260px, calc(100% - 16px));
+      background: rgba(18, 24, 38, 0.97);
+      border: 1px solid #2a3448;
+      border-radius: 10px;
+      padding: 11px 13px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+      color: #c9d2e3;
+      font-size: 11.5px;
+      line-height: 1.45;
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+    .viz-popover[hidden] { display: none; }
+    .viz-popover h4 { margin: 0 0 6px; font-size: 12px; color: #e6e9f0; font-weight: 600; }
+    .viz-popover p { margin: 0 0 6px; }
+    .viz-popover p:last-child { margin-bottom: 0; }
+    .viz-popover .kbd { font-family: ui-monospace, Menlo, monospace; background: #0a0e17; border: 1px solid #2a3448; border-radius: 4px; padding: 0 4px; font-size: 10.5px; color: #cfe3ff; }
+  </style>
+</head>
+<body>
+  <!-- Slight dimming overlay for the tour (only during walkthrough) -->
+  <div id="tour-overlay" class="tour-overlay" style="display: none;"></div>
+
+  <!-- Tour popup container (created dynamically) -->
+  <div id="tour-popup" class="tour-popup" style="display: none;"></div>
+
+  <div class="app">
+    <header>
+      <div>
+        <h1>RelSim</h1>
+        <div class="subtitle">Special relativity round-trip simulator (WebGL)</div>
+      </div>
+      <div class="units"><a href="index.html" style="color:var(--accent);text-decoration:none;">⌂ Simulations</a> &nbsp;·&nbsp; <a href="milkyway.html" style="color:var(--accent);text-decoration:none;">Milky Way 3D →</a> &nbsp;·&nbsp; Units: c = 1 (light-years / years)</div>
+    </header>
+
+    <div class="main">
+      <!-- Visualization -->
+      <div>
+        <div class="viz-container" id="viz-wrap">
+          <div class="viz-split" id="viz-split">
+            <div class="viz-pane" id="viz-pane-2d">
+              <canvas id="viz"></canvas>
+              <button id="btn-3d" class="viz-mini-toggle" type="button" aria-pressed="false"
+                title="Toggle 3D Earth view (key: 3)" aria-label="Toggle 3D Earth view">3D</button>
+              <button id="btn-3d-info" class="viz-info" type="button"
+                title="What am I looking at?" aria-label="About this view" aria-expanded="false">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M12 16v-4"></path>
+                  <path d="M12 8h.01"></path>
+                </svg>
+              </button>
+              <div id="viz-popover" class="viz-popover" hidden role="dialog" aria-label="About this view">
+                <h4>3D Earth view</h4>
+                <p>A first-person view from an observer on Earth &mdash; you see only the light-delayed &ldquo;ghost ship&rdquo;, never its true location.</p>
+                <p>Because light travels at finite speed, the ship appears at its <strong>retarded</strong> position: where it was when the light you see now left it. Its real position stays invisible; that light hasn&rsquo;t arrived yet.</p>
+                <p>The ghost ship is the <strong>same ship</strong> you see in the 2D map (same color, same shape); what changes is the light reaching Earth. Its light is <strong>Doppler-shifted</strong> across the spectrum: receding, it stretches toward infrared so the ship dims toward black; approaching, a red ship&rsquo;s hue rotates through orange, yellow, green, blue and (at the highest speeds) wraps back toward magenta. <em>Nothing is clamped</em> &mdash; at extreme speed the ship really does collapse to a near-invisible sliver or blaze out, exactly as the physics dictates.</p>
+                <p>Its shape uses the <strong>Terrell&ndash;Penrose</strong> photographed form by default (uncheck for textbook Lorentz contraction 1/&gamma;). The observer-position switch (sidebar) chooses who is watching: <strong>on Earth</strong> the ship&rsquo;s motion is radial, so you see a longitudinal distortion (approaching stretched, receding squashed); at the <strong>midpoint</strong> the motion is transverse, so the ship appears <em>rotated</em> by arcsin(&beta;) &mdash; the classic Terrell effect. This 3D view also moves to that observer&rsquo;s vantage.</p>
+                <p>At the midpoint observer you can <strong>zoom</strong>: scroll the 3D pane or use the +/&minus; buttons. Zooming pivots on the ship &mdash; zoomed out the whole route is framed (Earth &amp; asteroid near the edges); zoomed in the camera recenters on and follows the ship.</p>
+                <p>Toggle the view with the <strong>3D</strong> button (top-left) or the <span class="kbd">3</span> key.</p>
+              </div>
+            </div>
+            <div class="viz-pane" id="viz-pane-3d">
+              <canvas id="viz3d"></canvas>
+              <div class="v3d-label" id="v3d-ship"></div>
+              <div class="v3d-label" id="v3d-ast" style="color:#f0c98f;"></div>
+              <button id="btn-zoom-in" class="viz-zoom-btn" type="button" aria-label="Zoom in" title="Zoom in (scroll also works)">+</button>
+              <button id="btn-zoom-out" class="viz-zoom-btn" type="button" aria-label="Zoom out" title="Zoom out (scroll also works)">&minus;</button>
+            </div>
+          </div>
+          <!-- World labels (small, inside viz, positioned relative to viz-wrap) -->
+          <div id="label-earth" style="position:absolute; font-size:10px; color:#7fa8e0; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Earth</div>
+          <div id="label-asteroid" style="position:absolute; font-size:10px; color:#b89d7a; pointer-events:none; user-select:none; text-shadow: 0 1px 2px rgba(0,0,0,0.6);">Asteroid</div>
+        </div>
+
+        <!-- Nice clocks outside the visualization -->
+        <div class="clocks-panel">
+          <div class="clock-card earth">
+            <div class="clock-header">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <ellipse cx="12" cy="12" rx="9" ry="3.5"/>
+                <path d="M12 3v18"/>
+              </svg>
+              <span>Earth Observer</span>
+            </div>
+            <div class="clock-row clock-local">
+              <div class="clock-label">Earth time (local)</div>
+              <div class="stepper">
+                <button id="step-earth-minus" class="step-btn" type="button" aria-label="Subtract 1 Earth year">&#x2212;</button>
+                <span class="step-val"><span id="earth-local">0.00</span><span class="unit">y</span></span>
+                <button id="step-earth-plus" class="step-btn" type="button" aria-label="Add 1 Earth year">+</button>
+              </div>
+            </div>
+            <div class="clock-row">
+              <div class="clock-label">Ship time (observed)</div>
+              <div class="clock-value"><span id="earth-ship">0.00</span> <span class="unit">y</span></div>
+            </div>
+          </div>
+
+          <div class="clock-card ship">
+            <div class="clock-header">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2 L17 8 L17 15 Q12 20 7 15 L7 8 Z"/>
+                <circle cx="12" cy="10" r="1.8"/>
+                <path d="M8 15 L6 19"/>
+                <path d="M16 15 L18 19"/>
+                <path d="M12 20 L12 22"/>
+              </svg>
+              <span>Spaceship Observer</span>
+            </div>
+            <div class="clock-row clock-local">
+              <div class="clock-label">Ship time (local)</div>
+              <div class="stepper">
+                <button id="step-ship-minus" class="step-btn" type="button" aria-label="Subtract 1 Ship year">&#x2212;</button>
+                <span class="step-val"><span id="ship-local">0.00</span><span class="unit">y</span></span>
+                <button id="step-ship-plus" class="step-btn" type="button" aria-label="Add 1 Ship year">+</button>
+              </div>
+            </div>
+            <div class="clock-row">
+              <div class="clock-label">Earth time (observed)</div>
+              <div class="clock-value"><span id="ship-earth">0.00</span> <span class="unit">y</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <div class="control-group">
+          <label>Distance to asteroid: <span id="dist-val">10.0</span> ly</label>
+          <div class="control-row">
+            <input type="range" id="dist-slider" min="1" max="50" step="0.1" value="10">
+            <input type="number" id="dist-num" min="1" max="100" step="0.1" value="10">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Speed: <span id="speed-val">0.90</span>c &nbsp; γ = <span id="gamma-val">2.29</span></label>
+          <div class="control-row">
+            <input type="range" id="speed-slider" min="0.1" max="0.995" step="0.005" value="0.9">
+            <input type="number" id="speed-num" min="0.05" max="0.999" step="0.001" value="0.9">
+          </div>
+          <label class="opt" title="Off: textbook Lorentz contraction (1/γ). On: the photographed Terrell-Penrose shape, where the approaching ship looks stretched and the receding ship more squashed.">
+            <input type="checkbox" id="terrell-toggle" checked> Terrell&ndash;Penrose shape
+            <span style="opacity:0.6;font-size:11px">(photographed, not measured)</span>
+          </label>
+        </div>
+
+        <div class="control-group" aria-label="Observer position">
+          <div class="opt-label">Observer position</div>
+          <label class="opt"><input type="radio" name="observer-pos" value="earth" checked> On Earth</label>
+          <label class="opt"><input type="radio" name="observer-pos" value="mid"> Equidistant from Earth &amp; asteroid</label>
+          <div class="opt-note">The ghost ship&rsquo;s Terrell&ndash;Penrose distortion is computed for this observer. On Earth the motion is radial (longitudinal stretch); at the midpoint it is transverse (rotational distortion). The clock readings stay Earth-frame references.</div>
+        </div>
+
+        <div class="info">
+          <div><span class="k">Earth trip time:</span> <span class="v" id="info-earth-t">22.22</span> y</div>
+          <div><span class="k">Ship proper time:</span> <span class="v" id="info-ship-tau">9.69</span> y</div>
+          <div><span class="k">Current t (Earth frame):</span> <span class="v" id="info-t">0.00</span> y</div>
+          <div><span class="k">Current ship τ:</span> <span class="v" id="info-tau">0.00</span> y</div>
+          <div><span class="k">Ship position:</span> <span class="v" id="info-x">0.00</span> ly</div>
+          <div><span class="k">Leg:</span> <span class="v" id="info-leg">outbound</span></div>
+        </div>
+
+        <div class="buttons">
+          <button id="btn-play" class="primary">▶ Play</button>
+          <div class="playback-rate">
+            <label>Rate</label>
+            <input type="range" id="playback-slider" min="0.1" max="10" step="0.1" value="1">
+            <span id="playback-val">1.0x</span>
+          </div>
+        </div>
+
+        <button id="replay-tour" class="replay-btn" title="Show the guided tour again">Replay guided tour</button>
+
+        <div class="note">
+          The four clocks show proper times and <strong>light-signal observations</strong> (signals travel at c).<br>
+          &ldquo;Earth time (local)&rdquo; is Earth&rsquo;s coordinate time t simultaneous with the ship&rsquo;s true position.<br>
+          &ldquo;Ship time (observed)&rdquo; from Earth is the ship&rsquo;s proper time at the retarded (light-delayed) position.<br>
+          The ghost ship is the same ship as the real one. Its light is Doppler-shifted (dims toward black while receding; runs red&rsaquo;orange&rsaquo;green&rsaquo;blue while approaching) and its shape uses the <strong>Terrell&ndash;Penrose</strong> photographed form by default (uncheck for textbook Lorentz 1/&gamma;). Pick the observer with the radio below: on Earth the distortion is longitudinal; at the midpoint the ship appears <strong>rotated</strong> (transverse Terrell effect). Clocks stay Earth-frame references. Nothing is clamped &mdash; at high speed it can shrink to a sliver or blaze out white.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script>
+    // ============ Physics ============
+    function computeGamma(beta) {
+      return 1 / Math.sqrt(Math.max(1e-12, 1 - beta * beta));
+    }
+
+    // Relativistic visual effects applied to the OBSERVED ghost ship, computed from the
+    // ship's velocity decomposed relative to the OBSERVER's line of sight:
+    //   betaR = radial component (>0 = receding),  betaT = transverse component magnitude.
+    //  - Doppler factor f = 1/(gamma*(1+betaR)). This is the fully general relativistic
+    //    Doppler factor: pure recede (betaR=beta) and pure approach (betaR=-beta) reduce to
+    //    the textbook sqrt formulas; pure transverse (betaR=0) gives the transverse Doppler
+    //    redshift f = 1/gamma (a redshift with no radial motion).
+    //  - Color: f<1 (redshift) dims toward black; f>1 (blueshift) rotates hue red->..->blue.
+    //  - Length: Lorentz 1/gamma along motion; PLUS, for the Earth (radial) observer with
+    //    Terrell on, the photographed longitudinal length = f instead.
+    //  - Terrell rotation: the photographed shape rotates by arcsin(betaT) about the screen
+    //    normal. Zero for the Earth observer (purely radial, betaT=0); nonzero for the
+    //    midpoint observer (transverse motion). Applied only when the Terrell toggle is on.
+    function relativisticVisuals(beta, betaR, betaT, terrell, observerIsEarth) {
+      const b = Math.max(0, Math.min(0.9995, beta));
+      const gamma = 1 / Math.sqrt(Math.max(1e-12, 1 - b * b));
+      const br = Math.max(-0.9995, Math.min(0.9995, betaR));
+      const f = 1 / (gamma * (1 + br));    // general relativistic Doppler factor
+      // Apparent length along motion. Earth+Terrell uses the photographed longitudinal
+      // length f; otherwise textbook Lorentz contraction 1/gamma (the midpoint observer's
+      // Terrell effect is a rotation, not a length change).
+      const contraction = (observerIsEarth && terrell) ? f : 1 / gamma;
+      // Terrell rotation about the screen normal (radians). Zero if Terrell off or no
+      // transverse motion (Earth observer). Unclamped.
+      const bt = Math.max(0, Math.min(0.9995, betaT));
+      const rotRad = terrell ? Math.asin(bt) : 0;
+      // hue: redshift (f<=1) stays red and dims; blueshift (f>1) rotates the spectrum,
+      // uncapped (wraps past blue toward magenta at extreme beta).
+      const receding = f <= 1;
+      const hueDeg = receding ? 0 : Math.log(f) / Math.log(2) * 100;
+      const hueRad = hueDeg * Math.PI / 180;
+      // brightness ~ f^2.5 (beaming), unclamped; final HSL/HSV components stay in [0,1].
+      const light = Math.pow(f, 2.5);
+      const label = (receding ? 'redshift' : 'blueshift') + ' \u00d7' + f.toFixed(2);
+      return { contraction, rotRad, hueRad, hueDeg, light, f, label, receding };
+    }
+
+    // Shared scratch + helpers to apply the Doppler hue rotation to material colors.
+    const _hslTmp = { h: 0, s: 0, l: 0 };
+    function applyShift(mat, base, rv, baseEmis, emisI) {
+      if (!mat) return;
+      const hueAdd = rv.hueRad / (2 * Math.PI);
+      // Final lightness bounded to [0,1] (valid HSL range) but otherwise unclamped, so a
+      // strongly approaching ship washes toward white and a receding one toward black.
+      const L = (l) => Math.max(0, Math.min(1, l * rv.light));
+      base.getHSL(_hslTmp);
+      mat.color.setHSL((_hslTmp.h + hueAdd) % 1, _hslTmp.s, L(_hslTmp.l));
+      if (baseEmis && mat.emissive) {
+        baseEmis.getHSL(_hslTmp);
+        mat.emissive.setHSL((_hslTmp.h + hueAdd) % 1, _hslTmp.s, L(_hslTmp.l));
+      }
+      if (emisI != null && mat.emissiveIntensity != null) mat.emissiveIntensity = emisI * rv.light;
+    }
+    // representative observed color of the (red) ship under the Doppler shift, for glows
+    function shiftedRedColor(rv) {
+      const c = new THREE.Color(0xff4d4d);
+      const hueAdd = rv.hueRad / (2 * Math.PI);
+      c.getHSL(_hslTmp);
+      c.setHSL((_hslTmp.h + hueAdd) % 1, _hslTmp.s, Math.max(0, Math.min(1, _hslTmp.l * rv.light)));
+      return c;
+    }
+
+    function computeState(D, beta, progress) {
+      // progress: 0..1 along total Earth coordinate time T
+      const gamma = computeGamma(beta);
+      const T1 = D / beta;
+      const T = 2 * T1;
+      let t = progress * T;
+      if (!isFinite(t)) t = 0;
+
+      let leg, x, tau;
+      if (t <= T1) {
+        leg = 'out';
+        x = beta * t;
+        tau = t / gamma;
+      } else {
+        leg = 'in';
+        const dt = t - T1;
+        x = D - beta * dt;
+        tau = t / gamma;
+      }
+
+      // Light signal observations (c=1)
+      // "Earth now" is defined as coordinate time t (Earth-frame simultaneous with the ship's current event).
+      const earthLocal = t;
+
+      // Ship time observed from Earth at time t: the proper time of the ship at the retarded emission event
+      // whose light is arriving at Earth right now (at t). This accounts for light travel time.
+      const retarded = getObservedPositionFromEarth(D, beta, t);
+      const shipObs = retarded.te / gamma;
+
+      const shipLocal = tau;
+      const earthObs = t - x;       // Earth emission time whose light arrives at the ship at its current event t
+
+      // (For reference only) Time on Earth when the light *from the current ship event* will arrive.
+      const earthRecv = t + x;
+
+      return {
+        progress: Math.max(0, Math.min(1, progress)),
+        t, T, T1, gamma,
+        leg, x: Math.max(0, Math.min(D, x)),
+        tau,
+        earthRecv,
+        shipObs,
+        shipLocal,
+        earthObs,
+        earthLocal
+      };
+    }
+
+    function getObservedPositionFromEarth(D, beta, tNow) {
+      // Returns the emission event on the ship's worldline whose light is arriving
+      // at Earth at coordinate time tNow.
+      // Returns { x, leg, te } where te is the emission coordinate time.
+      if (tNow <= 0) return { x: 0, leg: 'out', te: 0 };
+
+      const T1 = D / beta;
+      const T = 2 * T1;
+
+      // Emission on outbound leg?
+      let te = tNow / (1 + beta);
+      if (te >= 0 && te <= T1) {
+        return { x: beta * te, leg: 'out', te };
+      }
+
+      // Emission on inbound leg?
+      te = (tNow - D - beta * T1) / (1 - beta);
+      if (te >= T1 && te <= T) {
+        let x = D - beta * (te - T1);
+        x = Math.max(0, Math.min(D, x));
+        return { x, leg: 'in', te };
+      }
+
+      // Fallbacks at the end
+      if (tNow >= T) return { x: 0, leg: 'in', te: T };
+      return { x: D, leg: 'out', te: T1 };
+    }
+
+    // ============ Observer position ============
+    // The observer can be on Earth (origin) or at the midpoint of the Earth-asteroid line,
+    // offset perpendicular to it (above, in the 2D plane). "Equidistant from Earth and
+    // asteroid" => on the perpendicular bisector x = D/2.
+    const OBS_FRAC = 0.4;   // perpendicular offset = D * OBS_FRAC (midpoint observer)
+    function getObserverLoc() {
+      if (observerPosition === 'mid') return { x: D / 2, y: D * OBS_FRAC };
+      return { x: 0, y: 0 };
+    }
+    function observerIsEarth() { return observerPosition === 'earth'; }
+
+    // Retarded emission event for the midpoint observer: solve t = te + |obs - ship(te)|
+    // for te on each leg (quadratic). Returns { x, leg, te } like the Earth version.
+    function getRetardedEventMid(D, beta, tNow, obs) {
+      if (tNow <= 0) return { x: 0, leg: 'out', te: 0 };
+      const T1 = D / beta, T = 2 * T1;
+      const h2 = obs.y * obs.y;
+      // x(te) = p*te + q on a leg; solve (t-te)^2 = (p*te + r)^2 + h^2, r = q - obs.x
+      function solveLeg(p, q, teMin, teMax) {
+        const r = q - obs.x;
+        const a = 1 - p * p;                  // = 1 - beta^2 > 0
+        const k = tNow + p * r;               // (t + p*r)
+        const disc = k * k - a * (tNow * tNow - r * r - h2);
+        if (disc < 0) return null;
+        const sq = Math.sqrt(disc);
+        const cands = [(k + sq) / a, (k - sq) / a];
+        for (const te of cands) {
+          if (te >= teMin - 1e-9 && te <= teMax + 1e-9 && te <= tNow + 1e-9) {
+            const x = p * te + q;
+            return { x: Math.max(0, Math.min(D, x)), leg: (p > 0 ? 'out' : 'in'), te };
+          }
+        }
+        return null;
+      }
+      let res = solveLeg(beta, 0, 0, T1);          // outbound: x = beta*te
+      if (res) return res;
+      res = solveLeg(-beta, 2 * D, T1, T);         // inbound: x = 2D - beta*te
+      if (res) return res;
+      // No emission event whose light has arrived yet (observer is off-axis, so the
+      // ship's earliest light reaches it only after a delay). Caller hides the ghost.
+      return null;
+    }
+
+    // Dispatch retarded event by observer. Earth keeps the closed-form solver (no
+    // spurious roots from squaring); midpoint uses the quadratic.
+    function getRetardedEvent(D, beta, tNow) {
+      if (observerPosition === 'mid') return getRetardedEventMid(D, beta, tNow, getObserverLoc());
+      return getObservedPositionFromEarth(D, beta, tNow);
+    }
+
+    // Decompose the ship's velocity (along x) at the retarded event into radial and
+    // transverse components relative to the observer, plus the signed Terrell rotation
+    // about the screen normal (+z). betaR > 0 = receding.
+    function observerRelativeMotion(retX, leg, beta, obs) {
+      const v = (leg === 'out') ? beta : -beta;     // x-velocity (c=1)
+      const dx = retX - obs.x;
+      const dy = 0 - obs.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1e-9;
+      const betaR = v * dx / d;
+      const betaT = Math.sqrt(Math.max(0, beta * beta - betaR * betaR));
+      // Terrell rotation axis = v x los; its z-component sets CW/CCW for the in-plane tilt.
+      const axisZ = v * (-obs.y) / d;
+      const signedRot = Math.asin(Math.max(0, Math.min(0.9995, betaT))) * Math.sign(axisZ || 1);
+      return { betaR, betaT, d, signedRot };
+    }
+
+    // ============ Cartoon Texture Generators (self-contained, cute style) ============
+    function makeCanvas(w, h) {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      return c;
+    }
+
+    function createEarthTexture(size = 128) {
+      const canvas = makeCanvas(size, size);
+      const ctx = canvas.getContext('2d', { alpha: true });
+      const cx = size / 2, cy = size / 2, r = size * 0.46;
+
+      // Ocean
+      ctx.fillStyle = '#3a8fd9';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Simple continents (cute blobs)
+      ctx.fillStyle = '#5cc46f';
+      ctx.beginPath();
+      ctx.ellipse(cx - r*0.25, cy - r*0.1, r*0.35, r*0.28, -0.6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + r*0.15, cy + r*0.18, r*0.32, r*0.25, 0.8, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + r*0.05, cy - r*0.28, r*0.22, r*0.18, -0.3, 0, Math.PI*2);
+      ctx.fill();
+
+      // Clouds
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.beginPath();
+      ctx.ellipse(cx - r*0.35, cy - r*0.22, r*0.22, r*0.1, -0.4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + r*0.28, cy + r*0.05, r*0.28, r*0.12, 0.5, 0, Math.PI*2);
+      ctx.fill();
+
+      // Bold outline
+      ctx.strokeStyle = '#1f3a5f';
+      ctx.lineWidth = size * 0.06;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Shine
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = size * 0.03;
+      ctx.beginPath();
+      ctx.arc(cx - r*0.2, cy - r*0.25, r*0.5, -1.2, -0.1);
+      ctx.stroke();
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function createAsteroidTexture(size = 128) {
+      const canvas = makeCanvas(size, size);
+      const ctx = canvas.getContext('2d', { alpha: true });
+      const cx = size / 2, cy = size / 2;
+
+      // Base rock
+      ctx.fillStyle = '#8c7a65';
+      ctx.beginPath();
+      ctx.moveTo(cx - 42, cy + 18);
+      ctx.quadraticCurveTo(cx - 48, cy - 10, cx - 22, cy - 38);
+      ctx.quadraticCurveTo(cx + 8, cy - 48, cx + 38, cy - 22);
+      ctx.quadraticCurveTo(cx + 52, cy + 5, cx + 30, cy + 36);
+      ctx.quadraticCurveTo(cx - 5, cy + 48, cx - 42, cy + 18);
+      ctx.closePath();
+      ctx.fill();
+
+      // Craters
+      ctx.fillStyle = '#6b5c4a';
+      ctx.beginPath(); ctx.arc(cx - 12, cy - 8, 11, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 16, cy + 10, 9, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx - 22, cy + 14, 7, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 8, cy - 18, 6, 0, Math.PI*2); ctx.fill();
+
+      // Highlights
+      ctx.strokeStyle = '#b3a28a';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx - 30, cy - 5);
+      ctx.quadraticCurveTo(cx - 5, cy - 25, cx + 25, cy - 5);
+      ctx.stroke();
+
+      // Bold outline
+      ctx.strokeStyle = '#3f3326';
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(cx - 42, cy + 18);
+      ctx.quadraticCurveTo(cx - 48, cy - 10, cx - 22, cy - 38);
+      ctx.quadraticCurveTo(cx + 8, cy - 48, cx + 38, cy - 22);
+      ctx.quadraticCurveTo(cx + 52, cy + 5, cx + 30, cy + 36);
+      ctx.quadraticCurveTo(cx - 5, cy + 48, cx - 42, cy + 18);
+      ctx.closePath();
+      ctx.stroke();
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function createShipTexture(size = 256, isGhost = false) {
+      const canvas = makeCanvas(size, Math.floor(size * 0.58));
+      const ctx = canvas.getContext('2d', { alpha: true });
+      const w = canvas.width, h = canvas.height;
+      const cx = w * 0.42, cy = h * 0.5; // center of body
+
+      const bodyColor = isGhost ? '#7edcff' : '#ff4d4d';
+      const accentColor = isGhost ? '#2a6a8f' : '#f0f4f8';  // light nose cone (was yellow, looked engine-like in front)
+      const finColor = isGhost ? '#3e8bc4' : '#2e5aa8';
+      const windowColor = isGhost ? '#e0f8ff' : '#a8d8ff';
+      const outlineColor = isGhost ? '#0f2a44' : '#1a1f2e';
+      const flameColors = isGhost ? ['#5fc1ff', '#a0e0ff'] : ['#ffaa00', '#ffdd44', '#ff5500'];
+
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      // Soft glow layer for ghost
+      if (isGhost) {
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#7edcff';
+        // large soft body
+        ctx.beginPath();
+        ctx.ellipse(cx + 6, cy, 72, 26, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 38, cy, 22, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Main body (capsule)
+      ctx.fillStyle = bodyColor;
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = isGhost ? 6 : 7;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 58, 22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Nose cone (classic pointed, light color so it doesn't look like a front engine/flame)
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.moveTo(cx + 55, cy - 16);
+      ctx.lineTo(cx + 85, cy);
+      ctx.lineTo(cx + 55, cy + 16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // subtle nose highlight to look more like a proper cone (not engine)
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + 58, cy - 10);
+      ctx.lineTo(cx + 80, cy - 2);
+      ctx.stroke();
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = isGhost ? 6 : 7;  // restore for fins etc.
+
+      // Fins (at rear for classic rocket look)
+      ctx.fillStyle = finColor;
+      // top fin
+      ctx.beginPath();
+      ctx.moveTo(cx - 20, cy - 18);
+      ctx.lineTo(cx - 34, cy - 30);
+      ctx.lineTo(cx - 10, cy - 18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // bottom fin
+      ctx.beginPath();
+      ctx.moveTo(cx - 20, cy + 18);
+      ctx.lineTo(cx - 34, cy + 30);
+      ctx.lineTo(cx - 10, cy + 18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // side accent fin (smaller)
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, cy + 18);
+      ctx.lineTo(cx - 18, cy + 26);
+      ctx.lineTo(cx + 2, cy + 18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Window
+      ctx.fillStyle = windowColor;
+      ctx.beginPath();
+      ctx.arc(cx + 12, cy, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // shine
+      ctx.fillStyle = isGhost ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.arc(cx + 9, cy - 3, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Stripes / details
+      ctx.strokeStyle = isGhost ? '#1f5a80' : '#c41c1c';
+      ctx.lineWidth = isGhost ? 2.5 : 3;
+      ctx.beginPath();
+      ctx.moveTo(cx - 30, cy - 10);
+      ctx.lineTo(cx + 20, cy - 10);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - 30, cy + 10);
+      ctx.lineTo(cx + 20, cy + 10);
+      ctx.stroke();
+
+      // Flame / signal for ghost
+      if (isGhost) {
+        ctx.strokeStyle = '#5fc1ff';
+        ctx.lineWidth = 2.5;
+        for (let i = 0; i < 3; i++) {
+          const off = i * 6;
+          ctx.beginPath();
+          ctx.moveTo(cx - 48 - off, cy);
+          ctx.lineTo(cx - 70 - off, cy - 6);
+          ctx.moveTo(cx - 48 - off, cy);
+          ctx.lineTo(cx - 70 - off, cy + 6);
+          ctx.stroke();
+        }
+        // small signal dots
+        ctx.fillStyle = 'rgba(126,220,255,0.8)';
+        ctx.beginPath(); ctx.arc(cx - 78, cy - 4, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx - 85, cy + 3, 1.5, 0, Math.PI*2); ctx.fill();
+      } else {
+        // Big bright flame
+        ctx.fillStyle = flameColors[0];
+        ctx.beginPath();
+        ctx.moveTo(cx - 48, cy - 7);
+        ctx.lineTo(cx - 78, cy);
+        ctx.lineTo(cx - 48, cy + 7);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = flameColors[1];
+        ctx.beginPath();
+        ctx.moveTo(cx - 48, cy - 4);
+        ctx.lineTo(cx - 66, cy);
+        ctx.lineTo(cx - 48, cy + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = flameColors[2];
+        ctx.beginPath();
+        ctx.moveTo(cx - 48, cy - 2);
+        ctx.lineTo(cx - 58, cy);
+        ctx.lineTo(cx - 48, cy + 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Final bold outline on whole ship
+      ctx.strokeStyle = outlineColor;
+      ctx.lineWidth = isGhost ? 5 : 6;
+      // Body outline already done, reinforce key edges
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 58, 22, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    // ============ App ============
+    const canvas = document.getElementById('viz');
+    const wrap = document.getElementById('viz-wrap');
+
+    let width = 720;
+    let height = 420;
+
+    // Three.js
+    let renderer, scene, camera;
+    let earthMesh, asteroidMesh, shipMesh, shadowShipMesh;
+    let observerIcon;
+    let routeOutMesh, routeInMesh;
+    let routeOutY = 1.05;
+    let routeInY = -1.05;
+    let stars;
+    let earthTexture, asteroidTexture, shipTexture, ghostTexture;
+
+    // State
+    let D = 10.0;
+    let beta = 0.9;
+    let progress = 0.0;
+    let playing = false;
+    let lastRafTime = 0;
+    let playbackRate = 1.0; // animation speed multiplier
+    let terrellEnabled = true; // Terrell-Penrose photographed shape vs Lorentz contraction (default on)
+    let observerPosition = 'earth'; // 'earth' (origin) or 'mid' (equidistant from Earth & asteroid)
+    let zoom3D = 0; // 3D midpoint camera zoom: 0 = whole route framed, 1 = on the ship
+
+    // Three objects refs for updates
+    let routeOut, routeIn; // meshes
+
+    // ---- 3D first-person (Earth observer) view ----
+    let renderer3d, scene3d, camera3d;
+    let earthSphere3d, earthSpin3d, asteroid3d, asteroidSpin3d, ghostShip3d, ghostGlow3d, starfield3d;
+    let view3DEnabled = false;
+    const FAR3D = 70;            // schematic distance (scene units) to the asteroid in the 3D view
+    const SHIP_Y3D = 1.5;        // elevation of the ship's line of flight above Earth's horizon
+
+    function initThree() {
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance'
+      });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(width, height);
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x05070f);
+
+      // Orthographic camera: will be updated to fit D
+      const aspect = width / height;
+      const viewH = 4.2;
+      camera = new THREE.OrthographicCamera(
+        -viewH * aspect / 2, viewH * aspect / 2,
+        viewH / 2, -viewH / 2,
+        -10, 10
+      );
+      camera.position.z = 5;
+
+      // Subtle stars
+      const starCount = 180;
+      const starPos = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount * 3; i += 3) {
+        starPos[i] = (Math.random() - 0.5) * 120;
+        starPos[i + 1] = (Math.random() - 0.5) * 9;
+        starPos[i + 2] = -2 + Math.random() * -3;
+      }
+      const starGeom = new THREE.BufferGeometry();
+      starGeom.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+      stars = new THREE.Points(
+        starGeom,
+        new THREE.PointsMaterial({ color: 0x445566, size: 0.04, sizeAttenuation: true })
+      );
+      scene.add(stars);
+
+      // Earth - cartoon textured
+      earthTexture = createEarthTexture(128);
+      earthTexture.magFilter = THREE.LinearFilter;
+      const earthGeom = new THREE.PlaneGeometry(0.82, 0.82);
+      earthMesh = new THREE.Mesh(
+        earthGeom,
+        new THREE.MeshBasicMaterial({ map: earthTexture, transparent: true, side: THREE.DoubleSide })
+      );
+      earthMesh.position.set(0, 0, 0);
+      scene.add(earthMesh);
+
+      // Asteroid - cartoon textured
+      asteroidTexture = createAsteroidTexture(128);
+      asteroidTexture.magFilter = THREE.LinearFilter;
+      const astGeom = new THREE.PlaneGeometry(0.72, 0.72);
+      asteroidMesh = new THREE.Mesh(
+        astGeom,
+        new THREE.MeshBasicMaterial({ map: asteroidTexture, transparent: true, side: THREE.DoubleSide })
+      );
+      scene.add(asteroidMesh);
+
+      // Routes as thick boxes (scale in x)
+      const routeMatOut = new THREE.MeshBasicMaterial({ color: 0x4aa3ff });
+      const routeMatIn = new THREE.MeshBasicMaterial({ color: 0xff9f4a });
+
+      const routeGeom = new THREE.PlaneGeometry(1, 0.18);
+
+      routeOut = new THREE.Mesh(routeGeom, routeMatOut);
+      routeOut.position.y = routeOutY;
+      routeOut.position.z = -0.02;
+      scene.add(routeOut);
+
+      routeIn = new THREE.Mesh(routeGeom, routeMatIn);
+      routeIn.position.y = routeInY;
+      routeIn.position.z = -0.02;
+      scene.add(routeIn);
+
+      // Faint direct path line (guide)
+      const guide = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 0.035),
+        new THREE.MeshBasicMaterial({ color: 0x222b3a, transparent: true, opacity: 0.55 })
+      );
+      guide.userData.isGuide = true;
+      scene.add(guide);
+      window.__relsimGuide = guide;
+
+      // Main spaceship - cartoon texture (bright)
+      shipTexture = createShipTexture(256, false);
+      shipTexture.magFilter = THREE.LinearFilter;
+      const shipPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.35, 0.78),
+        new THREE.MeshBasicMaterial({ map: shipTexture, transparent: true, side: THREE.DoubleSide })
+      );
+      shipMesh = shipPlane;
+      scene.add(shipMesh);
+
+      // Shadow spacecraft (observed from Earth). It is the SAME ship as shipMesh —
+      // same red texture — so at low beta it looks identical to the true ship. The
+      // Doppler shift is applied as a hue rotation + brightness via a shader; a soft
+      // glow halo behind it carries the shifted color.
+      ghostTexture = shipTexture;  // reuse the true ship's texture (same ship, observed)
+      const GHOST_VERT = [
+        'varying vec2 vUv;',
+        'void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }'
+      ].join('\n');
+      const GHOST_FRAG = [
+        'precision mediump float;',
+        'uniform sampler2D u_map;',
+        'uniform float u_hue;   // radians added to hue',
+        'uniform float u_light; // value multiplier',
+        'uniform float u_opacity;',
+        'varying vec2 vUv;',
+        // rgb->hsv (Sam Hocevar) then back, to rotate hue per pixel
+        'vec3 rgb2hsv(vec3 c){',
+        '  vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0);',
+        '  vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));',
+        '  vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));',
+        '  float d = q.x - min(q.w, q.y);',
+        '  float e = 1.0e-10;',
+        '  return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);',
+        '}',
+        'vec3 hsv2rgb(vec3 c){',
+        '  vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);',
+        '  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - 3.0);',
+        '  return c.z * mix(K.www, clamp(p - 1.0, 0.0, 1.0), c.y);',
+        '}',
+        'void main(){',
+        '  vec4 t = texture2D(u_map, vUv);',
+        '  vec3 hsv = rgb2hsv(t.rgb);',
+        '  hsv.x = fract(hsv.x + u_hue / 6.2831853);',
+        '  hsv.z = clamp(hsv.z * u_light, 0.0, 1.0);',
+        '  gl_FragColor = vec4(hsv2rgb(hsv), t.a * u_opacity);',
+        '}'
+      ].join('\n');
+      const ghostMat = new THREE.ShaderMaterial({
+        uniforms: {
+          u_map:     { value: ghostTexture },
+          u_hue:     { value: 0 },
+          u_light:   { value: 1 },
+          u_opacity: { value: 0.92 }
+        },
+        vertexShader: GHOST_VERT,
+        fragmentShader: GHOST_FRAG,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const ghostPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.48, 0.85),  // slightly larger than main
+        ghostMat
+      );
+      shadowShipMesh = ghostPlane;
+      shadowShipMesh.userData.ghostMat = ghostMat;
+      scene.add(shadowShipMesh);
+
+      // Soft glow halo behind the ghost, tinted to the Doppler-shifted color.
+      const halo = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.6, 1.5),
+        new THREE.MeshBasicMaterial({
+          map: makeRadialTexture('rgba(255,255,255,1)', 'rgba(255,255,255,0)'),
+          transparent: true, opacity: 0.30, side: THREE.DoubleSide, depthWrite: false,
+          blending: THREE.AdditiveBlending
+        })
+      );
+      shadowShipMesh.userData.halo = halo;
+      scene.add(halo);
+
+      // Safe initial positions
+      shipMesh.position.set(0, routeOutY, 0.03);
+      shadowShipMesh.position.set(0, routeOutY, 0.01);
+      shadowShipMesh.scale.set(1, 1, 1);
+      if (halo) {
+        halo.position.set(0, routeOutY, 0.005);
+        halo.scale.set(1, 1, 1);
+      }
+
+      // Observer position marker (shown for the midpoint observer)
+      function makeLabelTexture(text, color) {
+        const c = makeCanvas(256, 64);
+        const ctx = c.getContext('2d');
+        ctx.font = 'bold 34px system-ui, sans-serif';
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(text, 128, 32);
+        return new THREE.CanvasTexture(c);
+      }
+      observerIcon = new THREE.Group();
+      observerIcon.add(new THREE.Mesh(
+        new THREE.RingGeometry(0.34, 0.40, 32),
+        new THREE.MeshBasicMaterial({ color: 0xffc857, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+      ));
+      observerIcon.add(new THREE.Mesh(
+        new THREE.CircleGeometry(0.07, 18),
+        new THREE.MeshBasicMaterial({ color: 0xffc857, transparent: true, opacity: 0.6 })
+      ));
+      const obsLbl = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: makeLabelTexture('observer', '#caa05a'), transparent: true, opacity: 0.6, depthWrite: false
+      }));
+      obsLbl.scale.set(1.6, 0.4, 1);
+      obsLbl.position.set(0, 0.62, 0);
+      observerIcon.add(obsLbl);
+      observerIcon.visible = false;
+      scene.add(observerIcon);
+
+      // Reference tick marks will be (re)created when D changes
+      window.__relsimTicks = [];
+
+      updateCameraAndRoutes();
+      render();
+    }
+
+    function forceInitialLayout() {
+      // Make size match container early (handles 2D + optional 3D split)
+      relayoutViz();
+    }
+
+    function updateObserverIcon() {
+      if (!observerIcon) return;
+      if (observerPosition === 'mid') {
+        const loc = getObserverLoc();
+        observerIcon.position.set(loc.x, loc.y, 0.02);
+        observerIcon.visible = true;
+      } else {
+        observerIcon.visible = false;
+      }
+    }
+
+    function updateCameraAndRoutes() {
+      // Fit camera horizontally to content with margins
+      const margin = Math.max(1.6, D * 0.12);
+      const left = -margin;
+      const right = D + margin;
+      const aspect = width / height;
+
+      // Vertical framing. For the midpoint observer, raise the top to include the
+      // observer icon (at y = D*OBS_FRAC) with margin; otherwise keep the default.
+      const minH = width < 420 ? 3.8 : 4.8;
+      let top, bottom;
+      if (observerPosition === 'mid') {
+        top = Math.max(minH / 2, D * OBS_FRAC + 1.4);
+        bottom = -2.0;
+      } else {
+        top = minH / 2;
+        bottom = -minH / 2;
+      }
+      let vh = top - bottom;
+      const viewWidth = right - left;
+      const vwByH = vh * aspect;
+      const w = Math.max(viewWidth, vwByH);   // never crop the route horizontally
+      vh = w / aspect;
+      const cy = (top + bottom) / 2;
+      top = cy + vh / 2; bottom = cy - vh / 2;
+
+      const cx = (left + right) / 2;
+      camera.left = cx - w / 2;
+      camera.right = cx + w / 2;
+      camera.top = top;
+      camera.bottom = bottom;
+      camera.updateProjectionMatrix();
+
+      // Update route transforms (created as unit width)
+      const half = D / 2;
+      routeOut.scale.set(D, 1, 1);
+      routeOut.position.x = half;
+
+      routeIn.scale.set(D, 1, 1);
+      routeIn.position.x = half;
+
+      if (window.__relsimGuide) {
+        const g = window.__relsimGuide;
+        g.scale.set(D, 1, 1);
+        g.position.x = half;
+        g.position.y = 0;
+      }
+
+      asteroidMesh.position.x = D;
+      asteroidMesh.position.y = 0;
+
+      updateObserverIcon();
+
+      // Recreate tick marks along the route baseline
+      const oldTicks = window.__relsimTicks || [];
+      oldTicks.forEach(t => scene.remove(t));
+      window.__relsimTicks = [];
+
+      const tickMat = new THREE.MeshBasicMaterial({ color: 0x2f3a4a });
+      const tickG = new THREE.CircleGeometry(0.045, 16);
+      const step = Math.max(1, Math.floor(D / 8));
+      for (let i = 0; i <= D; i += step) {
+        const m = new THREE.Mesh(tickG, tickMat);
+        m.position.set(i, -0.02, -0.01);
+        scene.add(m);
+        window.__relsimTicks.push(m);
+        // last one at exact D if needed
+      }
+      if (Math.abs(D % step) > 0.01) {
+        const m = new THREE.Mesh(tickG, tickMat);
+        m.position.set(D, -0.02, -0.01);
+        scene.add(m);
+        window.__relsimTicks.push(m);
+      }
+    }
+
+    function placeShip(state) {
+      // True ship position (user-placed / actual coordinate position)
+      const y = (state.leg === 'out') ? routeOutY : routeInY;
+      shipMesh.position.set(state.x, y, 0.03);
+
+      const dir = (state.leg === 'out') ? 1 : -1;
+      shipMesh.scale.set(dir, 1, 1);   // mirror texture for direction (x flip)
+      shipMesh.rotation.z = 0;  // planes face camera
+
+      // Shadow ship + halo: observed (retarded) position for the current observer, with
+      // relativistic visuals (Lorentz contraction, Doppler color, Terrell rotation).
+      const obs = getRetardedEvent(D, beta, state.t);
+      const halo = shadowShipMesh.userData && shadowShipMesh.userData.halo;
+      if (!obs) {
+        // No light from the ship has reached this observer yet (off-axis midpoint).
+        shadowShipMesh.visible = false;
+        if (halo) halo.visible = false;
+        placeShip3D(state);
+        return;
+      }
+      shadowShipMesh.visible = true;
+      if (halo) halo.visible = true;
+      const sy = (obs.leg === 'out') ? routeOutY : routeInY;
+      shadowShipMesh.position.set(obs.x, sy, 0.01);
+      const oloc = getObserverLoc();
+      const rel = observerRelativeMotion(obs.x, obs.leg, beta, oloc);
+      const rv = relativisticVisuals(beta, rel.betaR, rel.betaT, terrellEnabled, observerIsEarth());
+      // Direction via rotation (not negative scale) so the Terrell tilt composes cleanly;
+      // contraction is along the ship's length, Terrell rotation tilts it in-plane.
+      const dirAngle = (obs.leg === 'out') ? 0 : Math.PI;
+      shadowShipMesh.scale.set(rv.contraction, 1, 1);
+      shadowShipMesh.rotation.z = dirAngle + rel.signedRot;
+      const gmat = shadowShipMesh.userData && shadowShipMesh.userData.ghostMat;
+      if (gmat) {
+        gmat.uniforms.u_hue.value = rv.hueRad;
+        gmat.uniforms.u_light.value = rv.light;
+        gmat.uniforms.u_opacity.value = 0.92;
+      }
+
+      // Halo glow follows the shadow, tinted to the Doppler-shifted color
+      if (halo) {
+        halo.position.set(obs.x, sy, 0.005);
+        halo.scale.set(1, 1, 1);   // soft symmetric glow (mirroring is irrelevant)
+        halo.rotation.z = 0;
+        if (halo.material) {
+          halo.material.color.copy(shiftedRedColor(rv));
+          halo.material.opacity = 0.30 * rv.light;
+        }
+      }
+
+      // Sync the 3D first-person view (ghost ship only, at retarded position)
+      placeShip3D(state);
+    }
+
+    function updateClocks(state) {
+      const fmt = (v) => (isFinite(v) ? v.toFixed(2) : '0.00');
+
+      document.getElementById('earth-local').textContent = fmt(state.earthLocal);
+      document.getElementById('earth-ship').textContent = fmt(state.shipObs);
+      document.getElementById('ship-local').textContent = fmt(state.shipLocal);
+      document.getElementById('ship-earth').textContent = fmt(state.earthObs);
+
+      // Info panel
+      document.getElementById('info-t').textContent = fmt(state.t);
+      document.getElementById('info-tau').textContent = fmt(state.tau);
+      document.getElementById('info-earth-t').textContent = fmt(state.T);
+      document.getElementById('info-ship-tau').textContent = fmt(2 * (state.T1 / state.gamma));
+      document.getElementById('info-x').textContent = fmt(state.x);
+      document.getElementById('info-leg').textContent = state.leg === 'out' ? 'outbound' : 'return';
+
+      // Position the small Earth / Asteroid labels inside the viz
+      positionLabels(state);
+    }
+
+    function updateLabelsAndGamma() {
+      document.getElementById('dist-val').textContent = D.toFixed(1);
+      document.getElementById('speed-val').textContent = beta.toFixed(2);
+      const g = computeGamma(beta);
+      document.getElementById('gamma-val').textContent = g.toFixed(2);
+
+      // sync inputs
+      document.getElementById('dist-slider').value = D;
+      document.getElementById('dist-num').value = D;
+      document.getElementById('speed-slider').value = beta;
+      document.getElementById('speed-num').value = beta;
+    }
+
+    function setStateFromProgress(p) {
+      progress = Math.max(0, Math.min(1, p));
+      const state = computeState(D, beta, progress);
+      placeShip(state);
+      updateClocks(state);
+      render();
+    }
+
+    function updateAll() {
+      updateCameraAndRoutes();
+      const state = computeState(D, beta, progress);
+      placeShip(state);
+      updateClocks(state);
+      updateLabelsAndGamma();
+      render();
+    }
+
+    function render() {
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+      }
+      if (view3DEnabled && renderer3d && scene3d && camera3d) {
+        renderer3d.render(scene3d, camera3d);
+      }
+    }
+
+    function worldToContainer(wx, wy) {
+      if (!camera) return { x: 60, y: 60 };
+      const v = new THREE.Vector3(wx, wy, 0).project(camera);
+      const wrapRect = wrap.getBoundingClientRect();
+      const cRect = canvas.getBoundingClientRect();
+      const px = (v.x * 0.5 + 0.5) * cRect.width;
+      const py = (-v.y * 0.5 + 0.5) * cRect.height;
+      return {
+        x: px + (cRect.left - wrapRect.left),
+        y: py + (cRect.top - wrapRect.top)
+      };
+    }
+
+    function positionLabels(state) {
+      const lblEarth = document.getElementById('label-earth');
+      const lblAster = document.getElementById('label-asteroid');
+      if (!lblEarth || !lblAster) return;
+
+      if (width < 300) {
+        lblEarth.style.display = 'none';
+        lblAster.style.display = 'none';
+        return;
+      }
+      lblEarth.style.display = '';
+      lblAster.style.display = '';
+
+      // Place labels below both routes to avoid overlap with the return path
+      const labelY = Math.min(routeOutY, routeInY) - 0.5;
+      const eLbl = worldToContainer(0, labelY);
+      lblEarth.style.left = (eLbl.x - 14) + 'px';
+      lblEarth.style.top = (eLbl.y + 2) + 'px';
+
+      const aLbl = worldToContainer(D, labelY);
+      lblAster.style.left = (aLbl.x - 22) + 'px';
+      lblAster.style.top = (aLbl.y + 2) + 'px';
+    }
+
+    // ============ Interaction: click on route ============
+    function getWorldFromMouse(e) {
+      const rect = canvas.getBoundingClientRect();
+      const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      // For orthographic: simple linear map
+      const worldX = ndcX * (camera.right - camera.left) / 2 + (camera.left + camera.right) / 2;
+      const worldY = ndcY * (camera.top - camera.bottom) / 2 + (camera.bottom + camera.top) / 2;
+      return { x: worldX, y: worldY };
+    }
+
+    function closestPointOnSegment(px, py, x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len2 = dx * dx + dy * dy;
+      if (len2 < 1e-12) return { x: x1, y: y1, dist: Math.hypot(px - x1, py - y1) };
+
+      let t = ((px - x1) * dx + (py - y1) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      const cx = x1 + t * dx;
+      const cy = y1 + t * dy;
+      return { x: cx, y: cy, dist: Math.hypot(px - cx, py - cy) };
+    }
+
+    function handleCanvasClick(e) {
+      playing = false;
+      document.getElementById('btn-play').textContent = '▶ Play';
+
+      const { x: wx, y: wy } = getWorldFromMouse(e);
+
+      const hitRadius = 0.65;
+
+      // Click on Asteroid → turnaround
+      if (Math.abs(wx - D) < hitRadius && Math.abs(wy) < hitRadius) {
+        const T1 = D / beta;
+        const T = 2 * T1;
+        const newProgress = T > 0 ? T1 / T : 0.5;
+        setStateFromProgress(newProgress);
+        return;
+      }
+
+      // Click on Earth → alternate between start (0) and end (1)
+      // If ship is at/near the end, click goes to start; otherwise to end.
+      if (Math.abs(wx) < hitRadius && Math.abs(wy) < hitRadius) {
+        const T = 2 * (D / beta);
+        const currT = progress * T;
+        if (currT >= T - 0.001) {
+          // at the end → go back to the start
+          setStateFromProgress(0);
+        } else {
+          // go to the end
+          setStateFromProgress(1);
+        }
+        return;
+      }
+
+      // Two segments in world units (route click for arbitrary position)
+      const outP1 = { x: 0, y: routeOutY };
+      const outP2 = { x: D, y: routeOutY };
+      const inP1 = { x: D, y: routeInY };
+      const inP2 = { x: 0, y: routeInY };
+
+      const c1 = closestPointOnSegment(wx, wy, outP1.x, outP1.y, outP2.x, outP2.y);
+      const c2 = closestPointOnSegment(wx, wy, inP1.x, inP1.y, inP2.x, inP2.y);
+
+      let chosen, leg;
+      if (c1.dist < c2.dist) {
+        chosen = c1;
+        leg = 'out';
+      } else {
+        chosen = c2;
+        leg = 'in';
+      }
+
+      // Accept only if reasonably close to the line (in world units)
+      const threshold = Math.max(0.9, D * 0.08);
+      if (chosen.dist > threshold) {
+        // Still allow if within a bit larger band vertically
+        if (Math.abs(chosen.y - wy) > 2.4) return;
+      }
+
+      const clickedX = Math.max(0, Math.min(D, chosen.x));
+
+      // Compute t from x + leg
+      const T1 = D / beta;
+      let t;
+      if (leg === 'out') {
+        t = clickedX / beta;
+      } else {
+        const dt = (D - clickedX) / beta;
+        t = T1 + dt;
+      }
+      const T = 2 * T1;
+      const newProgress = T > 0 ? Math.max(0, Math.min(1, t / T)) : 0;
+
+      setStateFromProgress(newProgress);
+    }
+
+    canvas.addEventListener('click', handleCanvasClick);
+
+    // Also support drag to scrub
+    let dragging = false;
+    canvas.addEventListener('mousedown', (e) => { dragging = true; handleCanvasClick(e); });
+    window.addEventListener('mouseup', () => { dragging = false; });
+    canvas.addEventListener('mousemove', (e) => {
+      if (dragging) handleCanvasClick(e);
+    });
+
+    // Touch support (simple)
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        playing = false;
+        document.getElementById('btn-play').textContent = '▶ Play';
+        const rect = canvas.getBoundingClientRect();
+        const fake = {
+          clientX: e.touches[0].clientX,
+          clientY: e.touches[0].clientY
+        };
+        handleCanvasClick(fake);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    function stepEarthYears(delta) {
+      playing = false;
+      document.getElementById('btn-play').textContent = '▶ Play';
+      const T = 2 * (D / beta);
+      if (T <= 0) return;
+      const currentT = progress * T;
+      let newT = currentT + delta;
+      newT = Math.max(0, Math.min(T, newT));
+      const newProgress = newT / T;
+      setStateFromProgress(newProgress);
+    }
+
+    function stepShipYears(delta) {
+      playing = false;
+      document.getElementById('btn-play').textContent = '▶ Play';
+      const T = 2 * (D / beta);
+      if (T <= 0) return;
+      const gamma = computeGamma(beta);
+      const maxTau = T / gamma;
+      const currentTau = (progress * T) / gamma;
+      let newTau = currentTau + delta;
+      newTau = Math.max(0, Math.min(maxTau, newTau));
+      const newT = newTau * gamma;
+      const newProgress = newT / T;
+      setStateFromProgress(newProgress);
+    }
+
+    // ============ Controls ============
+    function setupControls() {
+      const distSlider = document.getElementById('dist-slider');
+      const distNum = document.getElementById('dist-num');
+      const speedSlider = document.getElementById('speed-slider');
+      const speedNum = document.getElementById('speed-num');
+      const terrellToggle = document.getElementById('terrell-toggle');
+
+      function applyDist(val) {
+        D = Math.max(1, Math.min(100, parseFloat(val) || 10));
+        // keep same fractional progress along the trip
+        updateAll();
+      }
+      function applySpeed(val) {
+        beta = Math.max(0.05, Math.min(0.999, parseFloat(val) || 0.9));
+        updateAll();
+      }
+      if (terrellToggle) {
+        terrellToggle.addEventListener('change', () => {
+          terrellEnabled = terrellToggle.checked;
+          updateAll();
+        });
+      }
+      // observer-position radio
+      document.querySelectorAll('input[name="observer-pos"]').forEach(r => {
+        r.addEventListener('change', () => {
+          observerPosition = (r.value === 'mid') ? 'mid' : 'earth';
+          update3DCameraForObserver();
+          updateObserverIcon();
+          updateAll();
+        });
+      });
+      // 3D zoom (midpoint observer): mouse wheel + +/- buttons, pivoted on the ship.
+      function applyZoom3D(delta) {
+        if (observerPosition !== 'mid') return;
+        zoom3D = Math.max(0, Math.min(1, zoom3D + delta));
+        update3DCameraForObserver();
+        const st = computeState(D, beta, progress);
+        placeShip3D(st);
+        render();
+      }
+      const pane3d = document.getElementById('viz-pane-3d');
+      if (pane3d) {
+        pane3d.addEventListener('wheel', (e) => {
+          if (observerPosition !== 'mid') return;
+          e.preventDefault();
+          applyZoom3D(e.deltaY < 0 ? 0.08 : -0.08);   // scroll up = zoom in
+        }, { passive: false });
+      }
+      const zIn = document.getElementById('btn-zoom-in');
+      const zOut = document.getElementById('btn-zoom-out');
+      if (zIn) zIn.addEventListener('click', () => applyZoom3D(0.15));
+      if (zOut) zOut.addEventListener('click', () => applyZoom3D(-0.15));
+
+      distSlider.addEventListener('input', () => {
+        applyDist(distSlider.value);
+        distNum.value = D;
+      });
+      distNum.addEventListener('input', () => {
+        applyDist(distNum.value);
+        distSlider.value = D;
+      });
+
+      speedSlider.addEventListener('input', () => {
+        applySpeed(speedSlider.value);
+        speedNum.value = beta;
+      });
+      speedNum.addEventListener('input', () => {
+        applySpeed(speedNum.value);
+        speedSlider.value = beta;
+      });
+
+      // Playback rate slider (next to Play)
+      const playbackSlider = document.getElementById('playback-slider');
+      const playbackVal = document.getElementById('playback-val');
+      if (playbackSlider && playbackVal) {
+        playbackSlider.addEventListener('input', () => {
+          playbackRate = parseFloat(playbackSlider.value);
+          playbackVal.textContent = playbackRate.toFixed(1) + 'x';
+        });
+        // initial
+        playbackRate = parseFloat(playbackSlider.value);
+        playbackVal.textContent = playbackRate.toFixed(1) + 'x';
+      }
+
+      // Buttons
+      document.getElementById('btn-play').addEventListener('click', () => {
+        playing = !playing;
+        document.getElementById('btn-play').textContent = playing ? '⏸ Pause' : '▶ Play';
+        if (playing) {
+          if (progress >= 1) progress = 0;
+          lastRafTime = performance.now();
+          requestAnimationFrame(animate);
+        }
+      });
+
+      // Time step buttons (local times)
+      const stepEarthMinus = document.getElementById('step-earth-minus');
+      const stepEarthPlus = document.getElementById('step-earth-plus');
+      const stepShipMinus = document.getElementById('step-ship-minus');
+      const stepShipPlus = document.getElementById('step-ship-plus');
+      if (stepEarthMinus) stepEarthMinus.addEventListener('click', () => stepEarthYears(-1));
+      if (stepEarthPlus) stepEarthPlus.addEventListener('click', () => stepEarthYears(1));
+      if (stepShipMinus) stepShipMinus.addEventListener('click', () => stepShipYears(-1));
+      if (stepShipPlus) stepShipPlus.addEventListener('click', () => stepShipYears(1));
+
+      // Keyboard
+      window.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          playing = !playing;
+          document.getElementById('btn-play').textContent = playing ? '⏸ Pause' : '▶ Play';
+          if (playing) {
+            if (progress >= 1) progress = 0;
+            lastRafTime = performance.now();
+            requestAnimationFrame(animate);
+          }
+        }
+        if (e.key.toLowerCase() === 'r') {
+          playing = false;
+          document.getElementById('btn-play').textContent = '▶ Play';
+          progress = 0;
+          updateAll();
+        }
+        if (e.key === '3') {
+          e.preventDefault();
+          setView3D(!view3DEnabled);
+        }
+      });
+
+      // 3D view toggle
+      const btn3d = document.getElementById('btn-3d');
+      if (btn3d) btn3d.addEventListener('click', () => setView3D(!view3DEnabled));
+
+      // (i) info popover for the view
+      const infoBtn = document.getElementById('btn-3d-info');
+      const popover = document.getElementById('viz-popover');
+      if (infoBtn && popover) {
+        const setPopover = (show) => {
+          if (show) popover.removeAttribute('hidden'); else popover.setAttribute('hidden', '');
+          infoBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
+        };
+        infoBtn.addEventListener('click', (e) => { e.stopPropagation(); setPopover(popover.hasAttribute('hidden')); });
+        document.addEventListener('click', (e) => {
+          if (popover.hasAttribute('hidden')) return;
+          if (!popover.contains(e.target) && !infoBtn.contains(e.target)) setPopover(false);
+        });
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !popover.hasAttribute('hidden')) setPopover(false);
+        });
+      }
+
+      // initial sync
+      distSlider.value = D;
+      distNum.value = D;
+      speedSlider.value = beta;
+      speedNum.value = beta;
+    }
+
+    // ============ Animation ============
+    function animate(now = 0) {
+      if (!playing) return;
+
+      const dt = Math.max(0, (now - (lastRafTime || now)) / 1000);
+      lastRafTime = now;
+
+      // Advance using Earth coordinate time at a pleasant fixed rate (years/sec)
+      const yearsPerSec = 1.8 * playbackRate; // nice speed for visualization
+      const T = 2 * (D / beta);
+      const t = progress * T + dt * yearsPerSec;
+      progress = T > 1e-9 ? Math.min(1, t / T) : 1;
+
+      const state = computeState(D, beta, progress);
+      placeShip(state);
+      updateClocks(state);
+      render();
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        playing = false;
+        document.getElementById('btn-play').textContent = '▶ Play';
+      }
+    }
+
+    // ============ Resize ============
+    function resizeCanvas() {
+      // Resize both panes (2D always; 3D when enabled)
+      relayoutViz();
+    }
+
+    // ============ Boot ============
+    function init() {
+      initThree();
+      forceInitialLayout();
+      setupControls();
+
+      // Initial state
+      updateLabelsAndGamma();
+      const state = computeState(D, beta, progress);
+      placeShip(state);
+      updateClocks(state);
+      render();
+
+      // Size
+      window.addEventListener('resize', () => {
+        resizeCanvas();
+      });
+      window.addEventListener('orientationchange', () => {
+        setTimeout(resizeCanvas, 100); // iOS needs a delay
+      });
+
+      // Extra safety pass after fonts/layout
+      setTimeout(() => {
+        const st0 = computeState(D, beta, progress);
+        placeShip(st0);
+        updateClocks(st0);
+        render();
+      }, 40);
+
+      // Helpful: start with a small animation hint on first load? (no, user controls)
+      // Expose for debugging if needed
+      window.RelSim = { getState: () => computeState(D, beta, progress), setProgress: setStateFromProgress };
+
+      function startWalkthrough() {
+        const tourOverlay = document.getElementById('tour-overlay');
+        const tourPopup = document.getElementById('tour-popup');
+        let currentStep = 0;
+        let currentHighlight = null;
+
+        const steps = [
+          {
+            title: "The Scene",
+            text: "Earth (left) and the Asteroid (right). The two colored lines show the spaceship's outbound and return paths.",
+            target: ".viz-container",
+            placement: "bottom"
+          },
+          {
+            title: "Two Ships",
+            text: "The bright ship is its real position. The faint one shows what Earth actually sees (light takes time to arrive).",
+            target: ".viz-container",
+            placement: "right"
+          },
+          {
+            title: "The Clocks",
+            text: "Top clocks = Earth's view. Bottom clocks = Spaceship's view. They disagree because of speed and light delay!",
+            target: ".clocks-panel",
+            placement: "bottom"
+          },
+          {
+            title: "Click to Move",
+            text: "Click or drag anywhere on the glowing routes to instantly place the ship at that moment in the journey.",
+            target: ".viz-container",
+            placement: "top"
+          },
+          {
+            title: "Quick Jumps",
+            text: "Click the Earth circle to toggle between start and end. Click the Asteroid to jump straight to turnaround.",
+            target: "#label-earth",
+            placement: "right"
+          },
+          {
+            title: "Step the Clocks",
+            text: "Use the − and + buttons next to each local clock to step one year at a time on Earth or on the ship. Great for seeing the difference!",
+            target: ".clocks-panel",
+            placement: "top"
+          },
+          {
+            title: "Play & Speed",
+            text: "Press Play to animate the whole trip. Use the Rate slider next to it to slow down or speed up time.",
+            target: ".buttons",
+            placement: "left"
+          }
+        ];
+
+        function clearHighlight() {
+          if (currentHighlight) {
+            currentHighlight.classList.remove('tour-highlight');
+            currentHighlight = null;
+          }
+        }
+
+        function positionPopup(targetEl, placement = 'bottom') {
+          const rect = targetEl.getBoundingClientRect();
+          const popupRect = tourPopup.getBoundingClientRect();
+          const margin = 12;
+
+          let top, left;
+
+          switch (placement) {
+            case 'top':
+              top = rect.top - popupRect.height - margin;
+              left = rect.left + (rect.width - popupRect.width) / 2;
+              break;
+            case 'bottom':
+              top = rect.bottom + margin;
+              left = rect.left + (rect.width - popupRect.width) / 2;
+              break;
+            case 'left':
+              top = rect.top + (rect.height - popupRect.height) / 2;
+              left = rect.left - popupRect.width - margin;
+              break;
+            case 'right':
+              top = rect.top + (rect.height - popupRect.height) / 2;
+              left = rect.right + margin;
+              break;
+            default:
+              top = rect.bottom + margin;
+              left = rect.left;
+          }
+
+          // Keep inside viewport
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+
+          if (left < 8) left = 8;
+          if (left + popupRect.width > vw - 8) left = vw - popupRect.width - 8;
+          if (top < 8) top = 8;
+          if (top + popupRect.height > vh - 8) top = vh - popupRect.height - 8;
+
+          tourPopup.style.top = `${top + window.scrollY}px`;
+          tourPopup.style.left = `${left + window.scrollX}px`;
+        }
+
+        function showStep(index) {
+          if (index < 0 || index >= steps.length) return;
+
+          currentStep = index;
+          const step = steps[currentStep];
+
+          // Clear previous
+          clearHighlight();
+
+          // Find target
+          const target = document.querySelector(step.target);
+          if (target) {
+            target.classList.add('tour-highlight');
+            currentHighlight = target;
+          }
+
+          // Build popup content
+          tourPopup.innerHTML = `
+            <h3>${step.title}</h3>
+            <div class="tour-text">${step.text}</div>
+            <div class="tour-actions">
+              <button class="tour-skip">Skip tour</button>
+              <div>
+                ${currentStep > 0 ? '<button class="secondary" id="tour-prev">Back</button>' : ''}
+                <button id="tour-next">${currentStep === steps.length - 1 ? 'Done' : 'Next'}</button>
+              </div>
+            </div>
+          `;
+
+          tourPopup.style.display = 'block';
+
+          // Position after content is in DOM
+          requestAnimationFrame(() => {
+            if (target) {
+              positionPopup(target, step.placement);
+            } else {
+              // fallback center
+              tourPopup.style.top = '120px';
+              tourPopup.style.left = '50%';
+              tourPopup.style.transform = 'translateX(-50%)';
+            }
+          });
+
+          // Wire buttons
+          const skip = tourPopup.querySelector('.tour-skip');
+          const prev = tourPopup.querySelector('#tour-prev');
+          const next = tourPopup.querySelector('#tour-next');
+
+          if (skip) {
+            skip.addEventListener('click', finishTour);
+          }
+          if (prev) {
+            prev.addEventListener('click', () => showStep(currentStep - 1));
+          }
+          if (next) {
+            next.addEventListener('click', () => {
+              if (currentStep === steps.length - 1) {
+                finishTour();
+              } else {
+                showStep(currentStep + 1);
+              }
+            });
+          }
+        }
+
+        function finishTour() {
+          clearHighlight();
+          if (tourOverlay) {
+            tourOverlay.style.transition = 'opacity 0.2s ease';
+            tourOverlay.style.opacity = '0';
+            setTimeout(() => {
+              tourOverlay.style.display = 'none';
+              tourOverlay.style.opacity = '1';
+              tourOverlay.style.transition = '';
+            }, 220);
+          }
+          tourPopup.style.display = 'none';
+          sessionStorage.setItem('relsim_walkthrough_seen', 'true');
+        }
+
+        // Start the tour
+        if (tourOverlay) {
+          tourOverlay.style.display = 'block';
+          tourOverlay.style.opacity = '1';
+        }
+        showStep(0);
+
+        // Reposition on resize (simple)
+        // Note: we attach listener only once per tour start
+        const resizeHandler = () => {
+          if (tourPopup.style.display !== 'none' && currentHighlight) {
+            const step = steps[currentStep];
+            positionPopup(currentHighlight, step.placement);
+          }
+        };
+        window.addEventListener('resize', resizeHandler, { once: false });
+
+        // Store for potential cleanup if needed (optional)
+      }
+
+      // First-time guided tour
+      if (!sessionStorage.getItem('relsim_walkthrough_seen')) {
+        startWalkthrough();
+      }
+
+      // Replay button (always available)
+      const replayBtn = document.getElementById('replay-tour');
+      if (replayBtn) {
+        replayBtn.addEventListener('click', () => {
+          sessionStorage.removeItem('relsim_walkthrough_seen');
+          // Clear any existing tour UI
+          const existingOverlay = document.getElementById('tour-overlay');
+          const existingPopup = document.getElementById('tour-popup');
+          if (existingOverlay) {
+            existingOverlay.style.display = 'none';
+            existingOverlay.style.opacity = '1';
+          }
+          if (existingPopup) existingPopup.style.display = 'none';
+
+          // Remove previous highlights
+          document.querySelectorAll('.tour-highlight').forEach(el => {
+            el.classList.remove('tour-highlight');
+          });
+
+          startWalkthrough();
+        });
+      }
+    }
+
+    // ============ 3D first-person view (Earth observer) ============
+    // Unified layout for the 2D viz (and the optional 3D split pane).
+    function relayoutViz() {
+      const wrapW = Math.min(wrap.clientWidth || 360, window.innerWidth - 16);
+      const narrow = wrapW < 640;
+      const split = view3DEnabled;
+
+      // 2D pane width
+      let w2d;
+      if (split && !narrow) w2d = Math.max(220, Math.floor((wrapW - 8) / 2));
+      else w2d = Math.max(260, Math.floor(wrapW));
+      const aspect2d = (w2d < 400) ? 0.65 : 0.55;
+      const h2d = Math.max(160, Math.floor(w2d * aspect2d));
+
+      // 3D pane size
+      let w3d = 0, h3d = 0;
+      if (split) {
+        w3d = narrow ? w2d : Math.max(220, Math.floor((wrapW - 8) / 2));
+        h3d = narrow ? Math.max(190, Math.floor(w3d * 0.62)) : h2d;
+      }
+
+      const splitEl = document.getElementById('viz-split');
+      const pane2d = document.getElementById('viz-pane-2d');
+      const pane3d = document.getElementById('viz-pane-3d');
+      if (splitEl) {
+        splitEl.classList.toggle('split', split);
+        splitEl.classList.toggle('narrow', !!(split && narrow));
+      }
+      if (pane2d) pane2d.style.height = h2d + 'px';
+      if (splitEl) {
+        if (!split) splitEl.style.height = h2d + 'px';
+        else if (narrow) splitEl.style.height = (h2d + 8 + h3d) + 'px';
+        else splitEl.style.height = h2d + 'px';
+      }
+      if (pane3d) pane3d.style.height = split ? (narrow ? h3d + 'px' : h2d + 'px') : '';
+
+      // 2D drawing buffer
+      width = w2d; height = h2d;
+      canvas.width = w2d; canvas.height = h2d;
+      if (renderer) renderer.setSize(w2d, h2d, false);
+
+      // 3D drawing buffer
+      if (split && renderer3d) {
+        const c3 = document.getElementById('viz3d');
+        c3.width = w3d; c3.height = h3d;
+        renderer3d.setSize(w3d, h3d, false);
+        if (camera3d) { camera3d.aspect = w3d / Math.max(1, h3d); camera3d.updateProjectionMatrix(); }
+      }
+
+      updateCameraAndRoutes();
+      const st = computeState(D, beta, progress);
+      placeShip(st);
+      updateClocks(st);
+      render();
+    }
+
+    function setView3D(on) {
+      view3DEnabled = on;
+      const btn = document.getElementById('btn-3d');
+      if (btn) {
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btn.classList.toggle('active', on);
+        btn.title = (on ? 'Hide' : 'Show') + ' 3D Earth view (key: 3)';
+      }
+      if (on && !renderer3d) initThree3D();
+      relayoutViz();
+      if (on) {
+        update3DCameraForObserver();
+        const st = computeState(D, beta, progress);
+        placeShip3D(st);
+        render();
+      }
+    }
+
+    // ---- procedural assets ----
+    function makeRadialTexture(inner, outer) {
+      const s = 128;
+      const c = makeCanvas(s, s);
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+      g.addColorStop(0, inner);
+      g.addColorStop(1, outer);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, s, s);
+      const t = new THREE.CanvasTexture(c);
+      return t;
+    }
+
+    function createEarthSphereTexture(w = 512, h = 256) {
+      const c = makeCanvas(w, h);
+      const ctx = c.getContext('2d');
+      const og = ctx.createLinearGradient(0, 0, 0, h);
+      og.addColorStop(0, '#0a2a52'); og.addColorStop(0.5, '#114a86'); og.addColorStop(1, '#0a2a52');
+      ctx.fillStyle = og; ctx.fillRect(0, 0, w, h);
+      // continents
+      const land = ['#2f7d3f', '#3c8a48', '#6b7a36'];
+      for (let i = 0; i < 30; i++) {
+        ctx.fillStyle = land[i % land.length];
+        ctx.globalAlpha = 0.8 + Math.random() * 0.2;
+        const cx = Math.random() * w, cy = h * 0.18 + Math.random() * h * 0.64, r = 10 + Math.random() * 42;
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 2; a += 0.45) {
+          const rr = r * (0.55 + Math.random() * 0.7);
+          const px = cx + Math.cos(a) * rr;
+          const py = cy + Math.sin(a) * rr * 0.7;
+          if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      // polar caps
+      ctx.fillStyle = '#e8f2ff';
+      ctx.fillRect(0, 0, w, Math.floor(h * 0.08));
+      ctx.fillRect(0, Math.floor(h * 0.92), w, Math.ceil(h * 0.08));
+      // soft cloud streaks
+      ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 20; i++) {
+        const x = Math.random() * w, y = Math.random() * h, r = 18 + Math.random() * 52;
+        ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function makeStarfield3D() {
+      const N = 1400;
+      const pos = new Float32Array(N * 3);
+      const col = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        const u = Math.random(), v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2 * v - 1);
+        const r = 200 + Math.random() * 200;
+        pos[3 * i]     = r * Math.sin(phi) * Math.cos(theta);
+        pos[3 * i + 1] = r * Math.cos(phi);
+        pos[3 * i + 2] = r * Math.sin(phi) * Math.sin(theta);
+        // stellar color temperature (warm reds <-> cool blues)
+        const temp = Math.random() * 2 - 1;
+        const bright = 0.4 + Math.random() * 0.55;
+        const warm = Math.max(temp, 0), cool = Math.max(-temp, 0);
+        col[3 * i]     = Math.min(1, bright * (0.9 + warm * 0.18));
+        col[3 * i + 1] = Math.min(1, bright * 0.94);
+        col[3 * i + 2] = Math.min(1, bright * (1.0 + cool * 0.2));
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const m = new THREE.PointsMaterial({
+        size: 1.9, sizeAttenuation: true, vertexColors: true,
+        transparent: true, opacity: 1.0, depthWrite: false
+      });
+      return new THREE.Points(g, m);
+    }
+
+    function makeEarth3D() {
+      const grp = new THREE.Group();
+      const R = 3;
+      const tex = createEarthSphereTexture();
+      const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0.02 });
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 32), mat);
+      grp.add(sphere);
+      // atmosphere rim (additive backside shell) — adapted from space-web-game
+      const sunDir = new THREE.Vector3(0.7, 0.6, 0.4).normalize();
+      const atmos = new THREE.Mesh(
+        new THREE.SphereGeometry(R * 1.05, 48, 32),
+        new THREE.ShaderMaterial({
+          blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, side: THREE.BackSide,
+          uniforms: { uSunDir: { value: sunDir } },
+          vertexShader: [
+            'varying vec3 vN; varying vec3 vV; varying vec3 vWN;',
+            'void main(){ vN = normalize(normalMatrix * normal); vWN = normalize(mat3(modelMatrix) * normal);',
+            'vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }'
+          ].join('\n'),
+          fragmentShader: [
+            'varying vec3 vN; varying vec3 vV; varying vec3 vWN; uniform vec3 uSunDir;',
+            'void main(){ vec3 n = normalize(vN); vec3 vd = normalize(vV);',
+            'float limb = 1.0 - abs(dot(n, vd));',
+            'float edge = pow(smoothstep(0.42, 1.0, limb), 2.2);',
+            'float sun = smoothstep(-0.22, 0.68, dot(normalize(vWN), normalize(uSunDir)));',
+            'float a = edge * mix(0.16, 0.44, sun);',
+            'vec3 col = mix(vec3(0.12, 0.34, 0.72), vec3(0.93, 0.98, 1.0), max(edge * 0.78, sun));',
+            'gl_FragColor = vec4(col * a, a); }'
+          ].join('\n')
+        })
+      );
+      grp.add(atmos);
+      grp.userData.sphere = sphere;
+      return grp;
+    }
+
+    function makeAsteroidBeacon3D() {
+      const grp = new THREE.Group();
+      const rock = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(1.3, 1),
+        new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.95, metalness: 0.0, flatShading: true })
+      );
+      grp.add(rock);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: makeRadialTexture('#ffd9a0', 'rgba(255,176,102,0)'),
+        color: 0xffb066, transparent: true, opacity: 0.7,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      glow.scale.set(15, 15, 1);
+      grp.add(glow);
+      grp.userData.rock = rock;
+      return grp;
+    }
+
+    function makeGhostShip3D() {
+      const grp = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0xff4d4d, emissive: 0x7a1a1a, emissiveIntensity: 0.6,
+        roughness: 0.4, metalness: 0.3, transparent: true, opacity: 0.92
+      });
+      // nose cone (points +x)
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.9, 16), bodyMat);
+      cone.rotation.z = -Math.PI / 2;
+      grp.add(cone);
+      // body
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.55, 16), bodyMat);
+      cyl.rotation.z = -Math.PI / 2; cyl.position.x = -0.62;
+      grp.add(cyl);
+      // fins
+      const finMat = new THREE.MeshStandardMaterial({
+        color: 0x2e5aa8, emissive: 0x162a4a, emissiveIntensity: 0.45,
+        transparent: true, opacity: 0.85
+      });
+      for (const s of [-1, 1]) {
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.02, 0.3), finMat);
+        fin.position.set(-0.5, 0, s * 0.22);
+        grp.add(fin);
+      }
+      // engine glow at tail (-x)
+      const eng = new THREE.Mesh(
+        new THREE.SphereGeometry(0.13, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.9 })
+      );
+      eng.position.x = -0.92; grp.add(eng);
+      grp.userData.engine = eng;
+
+      // visibility halo (separate sprite, added to scene so it can pulse)
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: makeRadialTexture('#ffd9a0', 'rgba(255,176,102,0)'),
+        color: 0xffd9a0, transparent: true, opacity: 0.5,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      glow.scale.set(7.0, 7.0, 1);
+      // cache rest-state colors so placeShip3D can re-tint from base each frame (no compounding)
+      grp.userData.bodyMat = bodyMat;
+      grp.userData.bodyBase = new THREE.Color(0xff4d4d);
+      grp.userData.bodyEmisBase = new THREE.Color(0x7a1a1a);
+      grp.userData.bodyEmisI = 0.6;
+      grp.userData.finMat = finMat;
+      grp.userData.finBase = new THREE.Color(0x2e5aa8);
+      grp.userData.finEmisBase = new THREE.Color(0x162a4a);
+      grp.userData.finEmisI = 0.45;
+      grp.userData.engineMat = eng.material;
+      grp.userData.engineBase = new THREE.Color(0xffaa00);
+      glow.userData.baseColor = new THREE.Color(0xffd9a0);
+      glow.userData.baseOpacity = 0.5;
+      return { ship: grp, glow };
+    }
+
+    function initThree3D() {
+      if (renderer3d) return;
+      const canvas3d = document.getElementById('viz3d');
+      renderer3d = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+      renderer3d.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+      scene3d = new THREE.Scene();
+      scene3d.background = new THREE.Color(0x05070f);
+      // NOTE: no fog — a distance fog would erase the starfield (stars sit on a far shell).
+
+      camera3d = new THREE.PerspectiveCamera(58, 1, 0.1, 900);
+      // Observer grazing Earth's surface (Earth center at (0,-3,0), R=3): horizon fills the
+      // lower portion; ship + asteroid fly above it into the starfield.
+      camera3d.position.set(0.0, 0.08, 0.4);
+      camera3d.lookAt(FAR3D * 0.42, 0.55, 0);
+
+      // lighting — sun illuminates the Earth face the observer looks out from (toward the ship)
+      scene3d.add(new THREE.AmbientLight(0x223044, 0.95));
+      const sun = new THREE.DirectionalLight(0xfff2d8, 1.2);
+      sun.position.set(0.7, 0.6, 0.4).normalize().multiplyScalar(100);
+      scene3d.add(sun);
+
+      // starfield
+      starfield3d = makeStarfield3D();
+      scene3d.add(starfield3d);
+
+      // Earth (observer's planet) — surface sits below the horizon
+      earthSphere3d = makeEarth3D();
+      earthSphere3d.position.set(0, -3.0, 0);
+      earthSpin3d = earthSphere3d.userData.sphere;
+      scene3d.add(earthSphere3d);
+
+      // destination asteroid beacon far along +x
+      asteroid3d = makeAsteroidBeacon3D();
+      asteroid3d.position.set(FAR3D, SHIP_Y3D, 0);
+      asteroidSpin3d = asteroid3d.userData.rock;
+      scene3d.add(asteroid3d);
+
+      // ghost ship (apparent / retarded position only)
+      const g = makeGhostShip3D();
+      ghostShip3d = g.ship; ghostGlow3d = g.glow;
+      scene3d.add(ghostShip3d);
+      scene3d.add(ghostGlow3d);
+    }
+
+    function project3DToPane(vec) {
+      if (!camera3d) return null;
+      const v = vec.clone().project(camera3d);
+      const pane = document.getElementById('viz-pane-3d');
+      if (!pane) return null;
+      const rect = pane.getBoundingClientRect();
+      return {
+        x: (v.x * 0.5 + 0.5) * rect.width,
+        y: (-v.y * 0.5 + 0.5) * rect.height,
+        onScreen: v.z > -1 && v.z < 1 && v.x >= -1 && v.x <= 1 && v.y >= -1 && v.y <= 1
+      };
+    }
+
+    function update3DOverlay(obs, state) {
+      const shipLbl = document.getElementById('v3d-ship');
+      const astLbl = document.getElementById('v3d-ast');
+      if (shipLbl && ghostShip3d) {
+        const p = project3DToPane(ghostShip3d.position);
+        if (p && p.onScreen) {
+          shipLbl.style.display = '';
+          shipLbl.style.left = Math.min(p.x + 12, (document.getElementById('viz-pane-3d').clientWidth - 120)) + 'px';
+          shipLbl.style.top = Math.max(4, p.y - 8) + 'px';
+          shipLbl.textContent = 'ghost ship \u00b7 apparent ' + obs.x.toFixed(2) + ' ly (true ' + state.x.toFixed(2) + ')';
+        } else {
+          shipLbl.style.display = 'none';
+        }
+      }
+      if (astLbl) {
+        const p2 = project3DToPane(new THREE.Vector3(FAR3D, SHIP_Y3D, 0));
+        if (p2 && p2.onScreen) {
+          astLbl.style.display = '';
+          astLbl.style.left = Math.min(p2.x + 10, (document.getElementById('viz-pane-3d').clientWidth - 110)) + 'px';
+          astLbl.style.top = Math.max(18, p2.y - 22) + 'px';
+          astLbl.textContent = 'asteroid · ' + D.toFixed(1) + ' ly';
+        } else {
+          astLbl.style.display = 'none';
+        }
+      }
+    }
+
+    function placeShip3D(state) {
+      if (!view3DEnabled || !ghostShip3d) return;
+      const obs = getRetardedEvent(D, beta, state.t);
+      if (!obs) {
+        ghostShip3d.visible = false;
+        if (ghostGlow3d) ghostGlow3d.visible = false;
+        const shipLbl = document.getElementById('v3d-ship');
+        if (shipLbl) { shipLbl.textContent = 'ghost ship \u00b7 not yet visible to this observer'; shipLbl.style.display = ''; }
+        update3DCameraForObserver();
+        return;
+      }
+      ghostShip3d.visible = true;
+      if (ghostGlow3d) ghostGlow3d.visible = true;
+      const frac = D > 1e-9 ? Math.max(0, Math.min(1, obs.x / D)) : 0;
+      const xPos = frac * FAR3D;
+      ghostShip3d.position.set(xPos, SHIP_Y3D, 0);
+      ghostShip3d.rotation.y = (obs.leg === 'out') ? 0 : Math.PI; // point along travel direction
+
+      // Relativistic visuals from the observer-relative velocity decomposition.
+      const oloc = getObserverLoc();
+      const rel3 = observerRelativeMotion(obs.x, obs.leg, beta, oloc);
+      const rv = relativisticVisuals(beta, rel3.betaR, rel3.betaT, terrellEnabled, observerIsEarth());
+      ghostShip3d.scale.set(rv.contraction, 1, 1);
+      ghostShip3d.rotation.z = rel3.signedRot;   // Terrell tilt (0 for the radial Earth observer)
+      const u = ghostShip3d.userData;
+      if (u) {
+        if (u.bodyMat)   applyShift(u.bodyMat,   u.bodyBase,   rv, u.bodyEmisBase, u.bodyEmisI);
+        if (u.finMat)    applyShift(u.finMat,    u.finBase,    rv, u.finEmisBase, u.finEmisI);
+        if (u.engineMat) applyShift(u.engineMat, u.engineBase, rv);
+      }
+
+      ghostGlow3d.position.copy(ghostShip3d.position);
+      // gentle pulse + slow spin for life, scaled by relativistic beaming
+      const tt = performance.now() * 0.003;
+      if (ghostGlow3d.material) {
+        const gb = ghostGlow3d.userData && ghostGlow3d.userData.baseColor;
+        const hueAdd = rv.hueRad / (2 * Math.PI);
+        if (gb) { gb.getHSL(_hslTmp); ghostGlow3d.material.color.setHSL((_hslTmp.h + hueAdd) % 1, _hslTmp.s, Math.min(1, _hslTmp.l * Math.max(1, rv.light))); }
+        // Halo is a locator: keep it visible (floored) even when the ship dims to black
+        // on redshift, but still let it brighten on blueshift. Color still follows Doppler.
+        const pulse = 0.5 + 0.5 * Math.sin(tt);
+        ghostGlow3d.material.opacity = Math.min(0.95, Math.max(0.5, 0.5 * rv.light) + 0.2 * pulse);
+      }
+      if (earthSpin3d) earthSpin3d.rotation.y += 0.0006;
+      if (asteroidSpin3d) asteroidSpin3d.rotation.x += 0.0015;
+      update3DCameraForObserver();   // track the ship when zoomed in (midpoint observer)
+      update3DOverlay(obs, state);
+    }
+
+    // Position the 3D camera for the selected observer. Earth = the original first-person
+    // surface view; midpoint = looking down the route from above the Earth-asteroid midpoint.
+    function update3DCameraForObserver() {
+      if (!camera3d) return;
+      if (observerPosition === 'mid') {
+        camera3d.fov = 75;
+        // distFar frames the route ends (Earth/asteroid, +/- FAR3D/2 from center) near the
+        // view edges, derived from the pane aspect so it holds for any window shape.
+        const pane = document.getElementById('viz-pane-3d');
+        const aspect = (pane && pane.clientHeight > 0) ? pane.clientWidth / pane.clientHeight : 1.4;
+        const halfFovH = Math.tan((75 / 2) * Math.PI / 180) * aspect;
+        const distFar = Math.max(12, (FAR3D / 2) / (0.80 * halfFovH));
+        const distNear = 7;
+        const target0 = new THREE.Vector3(FAR3D / 2, 0, 0);   // route midpoint
+        const viewDir = new THREE.Vector3(0, 0.4648, 0.8854);  // up-and-back (normalized)
+        const shipPos = (ghostShip3d && ghostShip3d.visible) ? ghostShip3d.position : new THREE.Vector3(FAR3D / 2, SHIP_Y3D, 0);
+        // Zoom pivot is the ship: the look target slides from the route midpoint (zoomed out,
+        // whole route framed, Earth/asteroid near the edges) to the ship (zoomed in, centered).
+        const target = target0.clone().lerp(shipPos, zoom3D);
+        const dist = distFar * (1 - zoom3D) + distNear * zoom3D;
+        camera3d.position.copy(target).addScaledVector(viewDir, dist);
+        camera3d.lookAt(target);
+      } else {
+        camera3d.fov = 58;
+        camera3d.position.set(0.0, 0.08, 0.4);
+        camera3d.lookAt(FAR3D * 0.42, 0.55, 0);
+      }
+      camera3d.updateProjectionMatrix();
+      // zoom buttons are only meaningful for the midpoint overview
+      const showZoom = observerPosition === 'mid';
+      const zin = document.getElementById('btn-zoom-in'), zout = document.getElementById('btn-zoom-out');
+      if (zin) zin.style.display = showZoom ? '' : 'none';
+      if (zout) zout.style.display = showZoom ? '' : 'none';
+    }
+
+    init();
+  </script>
+</body>
+</html>
