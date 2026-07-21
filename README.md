@@ -9,7 +9,7 @@ A collection of interactive WebGL simulations of space and relativity.
 
 | Simulation | Page | Description |
 |---|---|---|
-| **Milky Way 3D** | [`milkyway.html`](https://todr.me/relsim/milkyway.html) | Interactive scale model of the Milky Way: spiral arms, bar, bulge, dust lanes, globular clusters, satellite galaxies and the Sun's neighborhood, with orbit/pan/zoom camera and a searchable catalog of ~60 known objects (with distances from Sol and fly-to locating). |
+| **Milky Way 3D** | [`milkyway.html`](https://todr.me/relsim/milkyway.html) | Interactive scale model of the Milky Way: spiral arms, bar, bulge, dust lanes, globular clusters, satellite galaxies and the Sun's neighborhood, with orbit/pan/zoom camera and a searchable catalog of ~60 known objects (with distances from Sol, fly-to locating, short descriptions and Wikipedia links). Selecting an object also shows a relativistic travel-time estimate (ship proper time vs. Earth time) with a max-speed slider (including a no-limit option) and configurable acceleration, flyby/landing mode, coasting fraction and ship mass (kinetic-energy estimate). |
 | **Twin Paradox** | [`twin-paradox.html`](https://todr.me/relsim/twin-paradox.html) | Special relativity round-trip simulator demonstrating the twin paradox with light-signal propagation. |
 
 ## Twin Paradox — Special Relativity Simulator

@@ -145,17 +145,74 @@
     #obj-info {
       position: fixed; left: 50%; transform: translateX(-50%); bottom: 52px; z-index: 10;
       background: var(--panel); border: 1px solid #2a3448; border-radius: 9px;
-      padding: 7px 12px; font-size: 12px; color: #c9d2e3; line-height: 1.4;
+      padding: 10px 14px; font-size: 12px; color: #c9d2e3; line-height: 1.4;
       -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-      display: none; align-items: baseline; gap: 10px; max-width: calc(100vw - 24px);
+      display: none; align-items: flex-start; gap: 12px; max-width: calc(100vw - 24px);
       box-shadow: 0 6px 20px rgba(0,0,0,0.5);
     }
     #obj-info b { color: #fff; font-weight: 650; }
+    #oi-text { max-width: min(520px, calc(100vw - 90px)); }
+    #oi-title { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+    .oi-type { color: #8a93a8; font-size: 11px; }
+    .oi-meta { color: #9fb0cc; font-size: 11px; margin-top: 3px; font-family: ui-monospace, Menlo, monospace; }
+    .oi-desc { color: #9aa5bb; font-size: 11.5px; line-height: 1.5; margin-top: 5px; }
+    #oi-wiki {
+      color: #7fe8ff; text-decoration: none; font-size: 10.5px; white-space: nowrap;
+      border: 1px solid rgba(127, 232, 255, 0.35); border-radius: 20px; padding: 1px 8px;
+    }
+    #oi-wiki:hover { background: rgba(127, 232, 255, 0.12); }
     #obj-info button {
       background: none; border: none; color: #8a93a8; cursor: pointer;
-      font-size: 13px; padding: 0 2px; align-self: center;
+      font-size: 13px; padding: 0 2px; align-self: flex-start; margin-top: 1px;
     }
     #obj-info button:hover { color: #fff; }
+
+    /* travel-time simulator */
+    #tv-vmax { width: 100%; accent-color: #4aa3ff; }
+    .tv-label { display: flex; justify-content: space-between; font-size: 11px; color: #9aa5bb; margin-bottom: 4px; }
+    .tv-label span { color: #e8edf5; font-family: ui-monospace, Menlo, monospace; }
+    #tv-config {
+      margin-top: 6px; width: 100%; background: #1f2636; color: var(--text);
+      border: 1px solid #2a3448; padding: 5px 8px; border-radius: 7px;
+      cursor: pointer; font-size: 11.5px; transition: all 0.1s ease;
+    }
+    #tv-config:hover { background: #263049; color: #fff; }
+    #travel-dlg {
+      position: fixed; inset: 0; z-index: 60; display: none;
+      align-items: center; justify-content: center;
+      background: rgba(4, 7, 12, 0.6);
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    }
+    #td-card {
+      width: min(410px, calc(100vw - 32px)); background: var(--panel);
+      border: 1px solid #2a3448; border-radius: 10px; padding: 14px 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6); font-size: 12px; color: var(--text);
+    }
+    #td-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    #td-head b { color: #fff; font-size: 13px; }
+    #td-head button { background: none; border: none; color: #8a93a8; cursor: pointer; font-size: 14px; padding: 0 2px; }
+    #td-head button:hover { color: #fff; }
+    .td-row { margin: 12px 0 0; }
+    .td-row > label { display: flex; justify-content: space-between; font-size: 11px; color: #9aa5bb; margin-bottom: 4px; }
+    .td-row > label span { color: #e8edf5; font-family: ui-monospace, Menlo, monospace; }
+    .td-row input[type="range"] { width: 100%; accent-color: #4aa3ff; }
+    .td-note { color: #6b7689; font-size: 10px; margin-top: 3px; line-height: 1.45; }
+    .td-seg { display: flex; gap: 6px; }
+    .td-seg button {
+      flex: 1; background: #1f2636; color: #9aa5bb; border: 1px solid #2a3448;
+      border-radius: 7px; padding: 5px 0; font-size: 11.5px; cursor: pointer;
+    }
+    .td-seg button.on { background: #24436b; color: #fff; border-color: #3f6ea8; }
+    .td-mass { display: flex; align-items: baseline; gap: 6px; }
+    .td-mass input {
+      width: 130px; background: #0a0e17; border: 1px solid #2a3448; color: #e8edf5;
+      padding: 4px 8px; border-radius: 7px; font-size: 12px; outline: none;
+      font-family: ui-monospace, Menlo, monospace;
+    }
+    .oi-travel { margin-top: 7px; padding-top: 6px; border-top: 1px solid #232b3d; }
+    .oi-t-head { font-size: 11.5px; color: #c9d2e3; }
+    .oi-t-head b { color: #7fe8ff; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; font-weight: 650; }
+    .oi-t-sub { color: #8a93a8; font-size: 10.5px; margin-top: 2px; font-family: ui-monospace, Menlo, monospace; }
 
     #nogl {
       position: fixed; inset: 0; z-index: 100; display: none;
@@ -190,6 +247,13 @@
       <div id="results"></div>
     </div>
 
+    <div class="group">
+      <div class="glabel">Travel time (ship)</div>
+      <label class="tv-label">max speed <span id="tv-vmax-val">0.9c</span></label>
+      <input type="range" id="tv-vmax" min="0.1" max="1" step="0.001" value="0.9">
+      <button id="tv-config" type="button">Configuration…</button>
+    </div>
+
     <div class="group" id="toggles">
       <div class="glabel">Layers</div>
       <label class="opt"><input type="checkbox" id="t-labels" checked> Labels</label>
@@ -213,7 +277,36 @@
   </div>
 
   <div id="hud">distance: <b id="hud-dist">—</b></div>
-  <div id="obj-info"><span id="oi-text"></span><button id="oi-close" aria-label="Close">✕</button></div>
+  <div id="obj-info"><div id="oi-text"></div><button id="oi-close" aria-label="Close">✕</button></div>
+
+  <div id="travel-dlg">
+    <div id="td-card">
+      <div id="td-head"><b>Travel configuration</b><button id="td-close" aria-label="Close">✕</button></div>
+      <div class="td-row">
+        <label>Acceleration <span id="td-acc-val">5 g</span></label>
+        <input type="range" id="td-acc" min="0" max="1" step="0.001">
+        <div class="td-note">Constant proper acceleration for the boost and braking burns (0.1–100 g, log scale).</div>
+      </div>
+      <div class="td-row">
+        <label>Flight mode</label>
+        <div class="td-seg">
+          <button id="td-mode-flyby" type="button">Flyby</button>
+          <button id="td-mode-landing" type="button" class="on">Landing</button>
+        </div>
+        <div class="td-note">Flyby keeps accelerating and streaks past the target; landing brakes during the second half and arrives at rest.</div>
+      </div>
+      <div class="td-row">
+        <label>Coast time <span id="td-coast-val">0%</span></label>
+        <input type="range" id="td-coast" min="0" max="90" step="1" value="0">
+        <div class="td-note">Percentage of the trip distance covered with engines off, coasting at the acquired speed. The max-speed cap may force a longer coast.</div>
+      </div>
+      <div class="td-row">
+        <label>Spaceship mass</label>
+        <div class="td-mass"><input type="number" id="td-mass" value="150000" min="1" step="1000"> kg</div>
+        <div class="td-note">Used for the kinetic-energy estimate: KE = (γ&minus;1)mc&sup2;.</div>
+      </div>
+    </div>
+  </div>
   <div id="hint">drag&nbsp;·&nbsp;rotate&ensp;|&ensp;right-drag&nbsp;/&nbsp;shift-drag&nbsp;·&nbsp;pan&ensp;|&ensp;scroll&nbsp;/&nbsp;pinch&nbsp;·&nbsp;zoom&ensp;|&ensp;double-click&nbsp;·&nbsp;focus</div>
   <div id="nogl">WebGL is not available in this browser, so the 3D view cannot start.</div>
 
@@ -1058,14 +1151,213 @@
     ring.material.opacity = age < 4 ? 0.95 : 0.95 * (1 - (age - 4) / 2);
   }
 
+  /* -------- object descriptions & wikipedia links (keyed by catalog name) -------- */
+  const OBJ_INFO = {
+    'Norma–Outer arm': { wiki: 'Norma Arm', desc: 'One of the Milky Way’s two major arms — it leaves the far end of the central bar and sweeps through the Norma and Cygnus tangents; its far-side extension is the Outer Arm.' },
+    'Scutum–Centaurus arm': { wiki: 'Scutum–Centaurus Arm', desc: 'A major arm unwinding from the near end of the bar, dense with giant molecular clouds and star-forming regions; it continues on the far side as the Crux Arm.' },
+    'Sagittarius–Carina arm': { wiki: 'Sagittarius Arm', desc: 'A major arm between Scutum–Centaurus and Perseus, traced by bright H II regions — M8, M16, M17 and the Carina complex lie along it.' },
+    'Perseus arm': { wiki: 'Perseus Arm', desc: 'The major arm just outside the Sun’s orbit, prominent in radio and infrared surveys of the galaxy.' },
+    'Orion Spur': { wiki: 'Orion Arm', desc: 'The minor arm segment — the Local Arm — that carries the Sun, Orion’s nebulae and most stars visible to the naked eye.' },
+    'Galactic bar': { wiki: 'Milky Way', desc: 'An elongated bar of stars about 26,000 ly long, tilted ~27° to the Sun–center line; the major spiral arms unwind from its ends.' },
+    'ω Centauri': { wiki: 'Omega Centauri', desc: 'The Milky Way’s largest and brightest globular cluster — some 10 million stars, likely the stripped core of a captured dwarf galaxy.' },
+    '47 Tucanae': { wiki: '47 Tucanae', desc: 'The second-brightest globular cluster, a naked-eye jewel of the southern sky beside the Small Magellanic Cloud.' },
+    'M13': { wiki: 'Messier 13', desc: 'The Great Hercules Cluster — several hundred thousand stars, the showpiece globular of the northern sky.' },
+    'M22': { wiki: 'Messier 22', desc: 'One of the brightest globulars, an elliptical swarm in Sagittarius near the Galactic bulge.' },
+    'M4': { wiki: 'Messier 4', desc: 'One of the two nearest globular clusters — a loose swarm in Scorpius, close to Antares on the sky.' },
+    'M5': { wiki: 'Messier 5', desc: 'A rich globular in Serpens and one of the oldest known, around 13 billion years old.' },
+    'M15': { wiki: 'Messier 15', desc: 'A dense, core-collapsed globular in Pegasus; the first globular found to host a planetary nebula.' },
+    'M92': { wiki: 'Messier 92', desc: 'A bright but often-overlooked globular in Hercules, among the oldest clusters in the Milky Way.' },
+    'M3': { wiki: 'Messier 3', desc: 'One of the largest and brightest globulars — half a million stars in Canes Venatici, rich in variable stars.' },
+    'NGC 6397': { wiki: 'NGC 6397', desc: 'One of the two nearest globular clusters, in Ara; its core has fully collapsed under its own gravity.' },
+    'NGC 2808': { wiki: 'NGC 2808', desc: 'A massive globular in Carina with three distinct generations of stars.' },
+    'M10': { wiki: 'Messier 10', desc: 'A rich globular in Ophiuchus, a near-twin of M12 on the sky.' },
+    'M2': { wiki: 'Messier 2', desc: 'One of the largest globular clusters in the halo — a slightly elliptical swarm in Aquarius.' },
+    'M30': { wiki: 'Messier 30', desc: 'A dense, core-collapsed globular in Capricornus.' },
+    'Large Magellanic Cloud': { wiki: 'Large Magellanic Cloud', desc: 'The Milky Way’s largest satellite galaxy, naked-eye visible from the southern hemisphere; home of the Tarantula Nebula and supernova 1987A.' },
+    'Small Magellanic Cloud': { wiki: 'Small Magellanic Cloud', desc: 'An irregular dwarf galaxy paired with the LMC, slowly being torn apart by the Milky Way’s gravity.' },
+    'Sagittarius dSph': { wiki: 'Sagittarius Dwarf Spheroidal Galaxy', desc: 'One of the closest satellite galaxies, hidden behind the bulge; currently being shredded into the Sagittarius stellar stream.' },
+    'Carina dSph': { wiki: 'Carina Dwarf Spheroidal Galaxy', desc: 'A faint dwarf spheroidal companion whose stars formed in separate bursts over billions of years.' },
+    'Draco dSph': { wiki: 'Draco Dwarf Galaxy', desc: 'A very faint, heavily dark-matter-dominated dwarf satellite discovered in 1954.' },
+    'Ursa Minor dSph': { wiki: 'Ursa Minor Dwarf', desc: 'Among the most dark-matter-dominated galaxies known — a faint fossil from the early universe.' },
+    'Sculptor dSph': { wiki: 'Sculptor Dwarf Galaxy', desc: 'The first dwarf spheroidal galaxy ever discovered (1937), a classic laboratory of galactic archaeology.' },
+    'Fornax dSph': { wiki: 'Fornax Dwarf', desc: 'A dwarf spheroidal remarkable for keeping its own globular clusters and forming stars until recently.' },
+    'Sextans dSph': { wiki: 'Sextans Dwarf Spheroidal', desc: 'An extremely diffuse dwarf spheroidal discovered in 1990 on photographic survey plates.' },
+    'Leo I dSph': { wiki: 'Leo I (dwarf galaxy)', desc: 'One of the most distant Milky Way satellites, still forming stars as recently as a billion years ago.' },
+    'Leo II dSph': { wiki: 'Leo II (dwarf galaxy)', desc: 'A distant, gas-poor dwarf spheroidal companion discovered in 1950.' },
+    'Alpha Centauri': { wiki: 'Alpha Centauri', desc: 'The nearest star system — Sun-like α Cen A and B plus Proxima Centauri, the closest individual star at 4.25 ly.' },
+    'Sirius': { wiki: 'Sirius', desc: 'The brightest star in the night sky — a white A-type star about twice the Sun’s mass, with a white-dwarf companion.' },
+    "Barnard's Star": { wiki: "Barnard's Star", desc: 'A nearby red dwarf with the largest proper motion of any known star — among the oldest stars near the Sun.' },
+    'Procyon': { wiki: 'Procyon', desc: 'The eighth-brightest star — a yellow-white subgiant with a faint white-dwarf companion.' },
+    'Tau Ceti': { wiki: 'Tau Ceti', desc: 'A calm, Sun-like G star just 12 ly away, circled by a debris disk and candidate planets.' },
+    'Epsilon Eridani': { wiki: 'Epsilon Eridani', desc: 'A young, Sun-like K dwarf about 10.5 ly away with dusty asteroid belts and a giant planet.' },
+    'Vega': { wiki: 'Vega', desc: 'The bright standard star of the northern summer sky — a fast-spinning A0 star with a debris disk; pole star around 12,000 BC.' },
+    'Arcturus': { wiki: 'Arcturus', desc: 'The brightest star of the northern celestial hemisphere — an orange giant visibly speeding through the galaxy.' },
+    'Capella': { wiki: 'Capella', desc: 'The sixth-brightest star — a pair of yellow giants orbiting each other, plus a faint red-dwarf pair, in Auriga.' },
+    'Hyades (cluster)': { wiki: 'Hyades (star cluster)', desc: 'The nearest open cluster — the V-shaped face of Taurus and a key rung of the cosmic distance ladder.' },
+    'Aldebaran': { wiki: 'Aldebaran', desc: 'The fiery orange eye of Taurus — a K5 giant lying in front of, but not part of, the Hyades.' },
+    'Pleiades': { wiki: 'Pleiades', desc: 'The Seven Sisters — a young cluster of hot blue stars still drifting through faint reflection nebulosity.' },
+    'Polaris': { wiki: 'Polaris', desc: 'The current North Star — a yellow supergiant Cepheid variable anchoring a triple system.' },
+    'Antares': { wiki: 'Antares', desc: 'A red supergiant at the heart of Scorpius, hundreds of times the Sun’s diameter; it will end as a supernova.' },
+    'Betelgeuse': { wiki: 'Betelgeuse', desc: 'Orion’s red-supergiant shoulder, so large it would swallow Jupiter’s orbit; a nearby supernova in waiting.' },
+    'Rigel': { wiki: 'Rigel', desc: 'A blue-white supergiant in Orion’s knee, tens of thousands of times more luminous than the Sun.' },
+    'Orion Nebula (M42)': { wiki: 'Orion Nebula', desc: 'The nearest massive star-forming region — a glowing H II cloud lit by the Trapezium stars, naked-eye visible in Orion’s sword.' },
+    'Lagoon Nebula (M8)': { wiki: 'Lagoon Nebula', desc: 'A giant star-forming H II region in Sagittarius, one of the few nebulae visible to the naked eye from northern latitudes.' },
+    'Omega Nebula (M17)': { wiki: 'Omega Nebula', desc: 'Also called the Swan Nebula — one of the galaxy’s most active star-forming H II regions, in Sagittarius.' },
+    'Eagle Nebula (M16)': { wiki: 'Eagle Nebula', desc: 'An H II region made famous by Hubble’s “Pillars of Creation”, towering columns of star-forming gas.' },
+    'Carina Nebula': { wiki: 'Carina Nebula', desc: 'One of the largest star-forming complexes in the galaxy, home of the eruptive luminous blue variable η Carinae.' },
+    'Ring Nebula (M57)': { wiki: 'Ring Nebula', desc: 'The archetypal planetary nebula — the shed outer layers of a dying Sun-like star, in Lyra.' },
+    'Crab Nebula (M1)': { wiki: 'Crab Nebula', desc: 'The expanding remnant of the supernova recorded in 1054 AD, powered from within by a spinning pulsar.' },
+    'Tarantula Nebula (30 Dor)': { wiki: 'Tarantula Nebula', desc: 'The most extreme star-forming region in the Local Group, in the LMC — at Orion’s distance it would cast shadows on Earth.' },
+    'Cygnus X-1': { wiki: 'Cygnus X-1', desc: 'The first widely accepted stellar-mass black hole — about 21 solar masses, accreting from a blue supergiant companion.' },
+    'VY Canis Majoris': { wiki: 'VY Canis Majoris', desc: 'One of the largest stars known — a red hypergiant roughly 1,400 times the Sun’s radius, shedding its outer layers.' },
+    'Sun': { wiki: 'Sun', desc: 'Our star — a 4.6-billion-year-old G2V dwarf holding 99.86% of the Solar System’s mass.' },
+    'Sagittarius A*': { wiki: 'Sagittarius A*', desc: 'The Milky Way’s central supermassive black hole — 4.3 million solar masses packed into a region smaller than Mercury’s orbit, imaged by the Event Horizon Telescope in 2022.' },
+  };
+  const wikiUrl = (title) => 'https://en.wikipedia.org/wiki/' + encodeURIComponent(title.replace(/ /g, '_'));
+
+  /* -------- relativistic travel-time simulator (c = 1: ly, years) -------- */
+  const G_LY = 1.0323;            // 1 g of proper acceleration in ly/y²
+  const travel = { vmax: 0.9, accelG: 5, mode: 'landing', coastPct: 0, massKg: 150000 };
+  let travelSel = null;           // currently located object
+
+  // Flight plan: boost at constant proper acceleration, coast at the acquired speed,
+  // (landing only) brake symmetrically to arrive at rest. Coast % is a fraction of the
+  // trip distance; the max-speed cap takes precedence and may extend the coast leg.
+  function planTrip(dLy) {
+    const a = travel.accelG * G_LY;
+    const f = travel.coastPct / 100;
+    const noCap = !isFinite(travel.vmax);   // slider at the far end: no speed limit
+    const gCap = noCap ? Infinity : 1 / Math.sqrt(1 - travel.vmax * travel.vmax);
+    const xCap = (gCap - 1) / a;                  // boost distance needed to reach vmax
+    const landing = travel.mode === 'landing';
+    const want = landing ? (1 - f) * dLy / 2 : (1 - f) * dLy;
+    const xb = Math.min(want, xCap);              // actual boost distance per burn
+    const g = 1 + a * xb;                         // peak Lorentz factor
+    const s = Math.sqrt(g * g - 1);               // v·γ in units of c
+    const boostTau = Math.acosh(g) / a, boostT = s / a;
+    const coastX = landing ? dLy - 2 * xb : dLy - xb;
+    const coastTau = coastX / s, coastT = coastX * g / s;
+    return {
+      landing,
+      tau: (landing ? 2 * boostTau : boostTau) + coastTau,
+      t: (landing ? 2 * boostT : boostT) + coastT,
+      boostTau, coastTau,
+      gPeak: g, beta: s / g,
+      capped: want > xCap,
+    };
+  }
+
+  function fmtYears(y) {
+    if (y < 0.15) return Math.max(1, Math.round(y * 365.25)) + ' d';
+    if (y < 10) return (Math.round(y * 10) / 10).toString() + ' y';
+    if (y < 1000) return Math.round(y) + ' y';
+    if (y < 1e6) return fmtK(y / 1e3) + 'k y';
+    return fmtK(y / 1e6) + 'M y';
+  }
+  function fmtK(v) { return (v < 10 ? v.toFixed(1) : String(Math.round(v))).replace(/\.0$/, ''); }
+  function fmtJoules(e) {
+    const ex = Math.floor(Math.log10(e));
+    return (e / Math.pow(10, ex)).toFixed(2) + '×10<sup>' + ex + '</sup> J';
+  }
+  function fmtGamma(g) {
+    if (g < 10) return g.toFixed(2);
+    if (g < 1000) return fmtK(g);
+    if (g < 1e6) return fmtK(g / 1e3) + 'k';
+    return fmtK(g / 1e6) + 'M';
+  }
+
+  function renderTravel() {
+    const el = document.getElementById('oi-travel');
+    if (!el || !travelSel) return;
+    const dLy = distSol(travelSel.pos) * LY;
+    if (dLy < 1e-9) { el.innerHTML = ''; return; }
+    const r = planTrip(dLy);
+    const mode = r.landing ? 'landing' : 'flyby';
+    let ph = mode + ' · boost ' + fmtYears(r.boostTau);
+    if (r.coastTau * 365.25 >= 0.5) ph += ' · coast ' + fmtYears(r.coastTau);
+    if (r.landing) ph += ' · brake ' + fmtYears(r.boostTau);
+    ph += ' · peak ' + (r.beta < 0.9995 ? r.beta.toFixed(3) + 'c' : 'γ ' + fmtGamma(r.gPeak)) +
+      (r.landing ? '' : ' (arrival speed)');
+    const ke = (r.gPeak - 1) * travel.massKg * 8.987551787e16;   // (γ−1)mc²
+    const keTot = r.landing ? 2 * ke : ke;                        // braking dumps it again
+    el.innerHTML =
+      '<div class="oi-t-head">TRAVEL — ship time <b>' + fmtYears(r.tau) + '</b>' +
+      '<span class="oi-t-sub"> · ' + fmtYears(r.t) + ' Earth frame</span></div>' +
+      '<div class="oi-t-sub">' + ph + '</div>' +
+      '<div class="oi-t-sub">' + (r.landing ? 'boost+brake' : 'arrival') + ' energy ≈ ' +
+      fmtJoules(keTot) + ' ≈ ' + fmtYears(keTot / 6e20) + ' of current global energy use</div>';
+  }
+
+  function setupTravel() {
+    const fmtBeta = v => !isFinite(v) ? 'no limit' : v.toFixed(3).replace(/0+$/, '').replace(/\.$/, '') + 'c';
+    const vmaxEl = document.getElementById('tv-vmax'), vmaxVal = document.getElementById('tv-vmax-val');
+    vmaxEl.addEventListener('input', () => {
+      const v = parseFloat(vmaxEl.value);
+      travel.vmax = v >= 0.9995 ? Infinity : v;   // last slider notch: no speed limit
+      vmaxVal.textContent = fmtBeta(travel.vmax);
+      renderTravel();
+    });
+
+    const dlg = document.getElementById('travel-dlg');
+    document.getElementById('tv-config').addEventListener('click', () => { dlg.style.display = 'flex'; });
+    document.getElementById('td-close').addEventListener('click', () => { dlg.style.display = 'none'; });
+    dlg.addEventListener('click', e => { if (e.target === dlg) dlg.style.display = 'none'; });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') dlg.style.display = 'none'; });
+
+    const accEl = document.getElementById('td-acc'), accVal = document.getElementById('td-acc-val');
+    const fmtG = g => (g < 1 ? g.toFixed(2) : g < 10 ? g.toFixed(1) : String(Math.round(g))) + ' g';
+    accEl.value = Math.log10(travel.accelG / 0.1) / 3;   // log scale, 0.1–100 g
+    accVal.textContent = fmtG(travel.accelG);
+    accEl.addEventListener('input', () => {
+      travel.accelG = 0.1 * Math.pow(1000, parseFloat(accEl.value));
+      accVal.textContent = fmtG(travel.accelG);
+      renderTravel();
+    });
+
+    const mFly = document.getElementById('td-mode-flyby'), mLand = document.getElementById('td-mode-landing');
+    const setMode = m => {
+      travel.mode = m;
+      mFly.classList.toggle('on', m === 'flyby');
+      mLand.classList.toggle('on', m === 'landing');
+      renderTravel();
+    };
+    mFly.addEventListener('click', () => setMode('flyby'));
+    mLand.addEventListener('click', () => setMode('landing'));
+
+    const coastEl = document.getElementById('td-coast'), coastVal = document.getElementById('td-coast-val');
+    coastEl.addEventListener('input', () => {
+      travel.coastPct = parseFloat(coastEl.value);
+      coastVal.textContent = coastEl.value + '%';
+      renderTravel();
+    });
+
+    const massEl = document.getElementById('td-mass');
+    massEl.addEventListener('change', () => {
+      const v = parseFloat(massEl.value);
+      travel.massKg = (isFinite(v) && v > 0) ? Math.min(v, 1e12) : 150000;
+      massEl.value = travel.massKg;
+      renderTravel();
+    });
+  }
+
   const objInfo = document.getElementById('obj-info');
   const objInfoText = document.getElementById('oi-text');
   function locateObj(o) {
     goTo(o.pos[0], o.pos[1], o.pos[2], o.viewR, controls.goal.th, controls.goal.ph);
     markRing(o.pos, o.viewR);
-    objInfoText.innerHTML = '<b>' + o.name + '</b> &middot; ' + o.type +
-      ' &middot; ' + fmtLy(distSol(o.pos)) + ' from Sol &middot; ' + fmtKpc(Math.hypot(o.pos[0], o.pos[1], o.pos[2])) + ' from the Galactic Center';
+    const info = OBJ_INFO[o.name] || {};
+    const dS = distSol(o.pos), dGC = Math.hypot(o.pos[0], o.pos[1], o.pos[2]);
+    let html = '<div id="oi-title"><b>' + o.name + '</b><span class="oi-type">' + o.type + '</span>';
+    if (info.wiki) html += '<a id="oi-wiki" href="' + wikiUrl(info.wiki) + '" target="_blank" rel="noopener noreferrer">Wikipedia &#8599;</a>';
+    html += '</div><div class="oi-meta">' +
+      (dS > 1e-6 ? fmtLy(dS) + ' from Sol' : 'this is Sol') + ' &middot; ' +
+      (dGC > 1e-6 ? fmtKpc(dGC) + ' from the Galactic Center' : 'at the Galactic Center') + '</div>';
+    if (info.desc) html += '<div class="oi-desc">' + info.desc + '</div>';
+    html += '<div class="oi-travel" id="oi-travel"></div>';
+    objInfoText.innerHTML = html;
     objInfo.style.display = 'flex';
+    travelSel = o;
+    renderTravel();
   }
   document.getElementById('oi-close').addEventListener('click', () => { objInfo.style.display = 'none'; });
 
@@ -1127,6 +1419,7 @@
   setupViews();
   setupToggles();
   setupSearch();
+  setupTravel();
 
   document.getElementById('panel-toggle').addEventListener('click', () => {
     document.body.classList.remove('panel-collapsed');
