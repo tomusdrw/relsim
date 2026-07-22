@@ -115,6 +115,8 @@
     .wl.ring { color: #5f7290; font-size: 10px; font-family: ui-monospace, Menlo, monospace; }
     .wl.ring::before { display: none; }
     .wl.major { color: #ffe9b8; font-weight: 650; font-size: 12.5px; }
+    .wl.const { color: #93a1bd; font-size: 10px; font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; }
+    .wl.const.zodiac { color: #e8c87a; }
 
     @media (max-width: 700px) {
       #hint { display: none; }
@@ -264,6 +266,7 @@
       <label class="opt"><input type="checkbox" id="t-gc" checked> Globular clusters</label>
       <label class="opt"><input type="checkbox" id="t-sats" checked> Satellite galaxies</label>
       <label class="opt"><input type="checkbox" id="t-stars" checked> Notable stars &amp; nebulae</label>
+      <label class="opt"><input type="checkbox" id="t-const"> Constellations (sky directions from Sol)</label>
       <label class="opt"><input type="checkbox" id="t-rot"> Auto-rotate</label>
     </div>
 
@@ -272,7 +275,8 @@
       <p>Units are parsecs; positions are galactocentric (+x toward the Sun, +y toward ℓ=90°, +z toward the north galactic pole). Distances and orientations follow published values; star/nebula <em>point sizes</em> are illustrative, not physical.</p>
       <p>☉ Sun: 8.15 kpc from the center, 20 pc above the plane. Bar: half-length ≈ 4 kpc, tilted 27°. Arms: 4 logarithmic arms, pitch ≈ 13°, fitted to observed arm tangencies &amp; crossings (Scutum +33° vs. obs. +31°, Sagittarius +44° vs. +50°, Carina at 2.4 kpc vs. ≈2.3 kpc). Arm geometry is still debated — this is one defensible model.</p>
       <p>Satellites &amp; globular clusters sit at measured positions (named clusters are catalog entries; the rest of the ~150-cluster halo is a statistical fill-in). Notable stars use Gaia/Hipparcos distances — zoom to the Sun to see them.</p>
-      <p class="src">Sources: GRAVITY Collab. 2019 (R₀); Wegg+ 2015 (bar); Vallée 2014c/2015/2017 (arms); Bennett &amp; Bovy 2019 (z☉); Pietrzyński+ 2019 / Graczyk+ 2020 (LMC/SMC); McConnachie 2012 (dSph); Harris 1996, 2010 ed. (clusters); Bland-Hawthorn &amp; Gerhard 2016 (disk).</p>
+      <p>The optional constellations layer draws spokes from Sol toward each constellation and an ecliptic ring (the zodiac band, gold labels), plus the IAU stick figures themselves: 703 real stars at their measured Hipparcos distances, so the shapes only line up when viewed from the Sun — zoom right into the Sun and look around. Direction labels are spherical centroids of the stick figures (d3-celestial).</p>
+      <p class="src">Sources: GRAVITY Collab. 2019 (R₀); Wegg+ 2015 (bar); Vallée 2014c/2015/2017 (arms); Bennett &amp; Bovy 2019 (z☉); Pietrzyński+ 2019 / Graczyk+ 2020 (LMC/SMC); McConnachie 2012 (dSph); Harris 1996, 2010 ed. (clusters); Bland-Hawthorn &amp; Gerhard 2016 (disk); Stellarium "modern" skyculture (figure topology); HYG v4.0 (figure-star positions &amp; distances).</p>
     </details>
   </div>
 
@@ -311,6 +315,7 @@
   <div id="nogl">WebGL is not available in this browser, so the 3D view cannot start.</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="constellation-figures.js"></script>
   <script>
   'use strict';
   /* ================================================================
@@ -682,7 +687,7 @@
     const b = Math.asin(
       Math.sin(dec) * Math.sin(ngpDec) + Math.cos(dec) * Math.cos(ngpDec) * Math.cos(ngpRa - ra));
     const l = lNCP - Math.atan2(
-      Math.cos(dec) * Math.sin(ngpRa - ra),
+      Math.cos(dec) * Math.sin(ra - ngpRa),
       Math.sin(dec) * Math.cos(ngpDec) - Math.cos(dec) * Math.sin(ngpDec) * Math.cos(ngpRa - ra));
     return lbToGC(l / D, b / D, dPc);
   }
@@ -841,6 +846,7 @@
 
   /* ---------------- special markers: Sun, Sgr A* ---------------- */
   const SUN_POS = [R0, 0, SUN_Z];
+  let sunGlow = null;
   function buildMarkers() {
     const sunPos = new Float32Array(SUN_POS);
     const sunCol = new Float32Array([1.0, 0.91, 0.66]);
@@ -850,6 +856,7 @@
     ss.position.set(SUN_POS[0], SUN_POS[1], SUN_POS[2]);
     ss.scale.set(24, 24, 1);
     addLayer('sun', ss);
+    sunGlow = ss;
     regObj('Sun', 'G-type main-sequence star', SUN_POS, 80, 'sol, the sun');
 
     const gcPos = new Float32Array([0, 0, 0]);
@@ -860,6 +867,158 @@
     gs.scale.set(650, 650, 1);
     addLayer('sgra', gs);
     regObj('Sagittarius A*', 'supermassive black hole', [0, 0, 0], 1500, 'sgr a*, galactic center, gc');
+  }
+
+  /* ---------------- constellations (sky directions from Sol) ---------------- */
+  // [name, RA deg, Dec deg, zodiac?] — spherical centroids of the IAU stick figures,
+  // J2000 (data: d3-celestial / ofrohn). Directions are heliocentric by definition.
+  const CONSTELLATIONS = [
+    ['Andromeda', 7.7, 38.7, 0],
+    ['Antlia', 154.4, -35.1, 0],
+    ['Apus', 242.0, -78.8, 0],
+    ['Aquarius', 335.7, -7.4, 1],
+    ['Aquila', 294.8, 5.0, 0],
+    ['Ara', 258.7, -55.9, 0],
+    ['Aries', 32.7, 22.8, 1],
+    ['Auriga', 81.7, 42.1, 0],
+    ['Boötes', 216.6, 32.9, 0],
+    ['Caelum', 71.3, -39.9, 0],
+    ['Camelopardalis', 71.7, 66.2, 0],
+    ['Cancer', 130.6, 18.0, 1],
+    ['Canes Venatici', 191.3, 39.9, 0],
+    ['Canis Major', 103.7, -21.9, 0],
+    ['Canis Minor', 113.3, 6.8, 0],
+    ['Capricornus', 314.2, -18.3, 1],
+    ['Carina', 142.1, -61.3, 0],
+    ['Cassiopeia', 14.8, 60.4, 0],
+    ['Centaurus', 200.9, -49.7, 0],
+    ['Cepheus', 327.6, 64.6, 0],
+    ['Cetus', 31.4, -2.6, 0],
+    ['Chamaeleon', 160.6, -79.4, 0],
+    ['Circinus', 227.3, -61.1, 0],
+    ['Columba', 88.1, -36.3, 0],
+    ['Coma Berenices', 194.2, 24.7, 0],
+    ['Corona Australis', 285.0, -40.0, 0],
+    ['Corona Borealis', 236.0, 28.1, 0],
+    ['Corvus', 184.5, -21.3, 0],
+    ['Crater', 171.5, -16.5, 0],
+    ['Crux', 187.5, -59.7, 0],
+    ['Cygnus', 302.7, 40.7, 0],
+    ['Delphinus', 309.9, 14.6, 0],
+    ['Dorado', 76.2, -59.4, 0],
+    ['Draco', 256.4, 66.5, 0],
+    ['Equuleus', 318.4, 8.5, 0],
+    ['Eridanus', 53.5, -26.4, 0],
+    ['Fornax', 40.5, -30.4, 0],
+    ['Gemini', 105.9, 23.0, 1],
+    ['Grus', 336.6, -45.1, 0],
+    ['Hercules', 254.8, 32.8, 0],
+    ['Horologium', 46.4, -54.3, 0],
+    ['Hydra', 152.6, -10.2, 0],
+    ['Hydrus', 33.4, -70.1, 0],
+    ['Indus', 315.1, -52.5, 0],
+    ['Lacerta', 336.5, 46.2, 0],
+    ['Leo', 157.3, 18.8, 1],
+    ['Leo Minor', 154.1, 35.4, 0],
+    ['Lepus', 83.1, -17.3, 0],
+    ['Libra', 229.6, -19.3, 1],
+    ['Lupus', 232.2, -41.4, 0],
+    ['Lynx', 124.6, 47.2, 0],
+    ['Lyra', 281.9, 36.8, 0],
+    ['Mensa', 80.9, -74.5, 0],
+    ['Microscopium', 315.4, -36.2, 0],
+    ['Monoceros', 104.0, -0.3, 0],
+    ['Musca', 187.5, -69.3, 0],
+    ['Norma', 243.1, -47.5, 0],
+    ['Octans', 295.5, -85.1, 0],
+    ['Ophiuchus', 255.0, -8.0, 1],
+    ['Orion', 81.7, 6.5, 0],
+    ['Pavo', 293.6, -66.3, 0],
+    ['Pegasus', 341.5, 21.1, 0],
+    ['Perseus', 50.8, 45.3, 0],
+    ['Phoenix', 13.6, -46.7, 0],
+    ['Pictor', 91.3, -56.6, 0],
+    ['Pisces', 8.4, 9.9, 1],
+    ['Piscis Austrinus', 336.8, -31.3, 0],
+    ['Puppis', 115.8, -31.1, 0],
+    ['Pyxis', 128.8, -34.1, 0],
+    ['Reticulum', 61.5, -62.1, 0],
+    ['Sagitta', 296.7, 18.4, 0],
+    ['Sagittarius', 284.8, -27.8, 1],
+    ['Scorpius', 251.3, -32.9, 1],
+    ['Sculptor', 358.9, -32.3, 0],
+    ['Scutum', 279.5, -9.0, 0],
+    ['Serpens Caput', 237.3, 11.4, 0],
+    ['Serpens Cauda', 270.4, -8.1, 0],
+    ['Sextans', 153.8, -3.0, 0],
+    ['Taurus', 63.6, 14.3, 1],
+    ['Telescopium', 275.6, -47.0, 0],
+    ['Triangulum', 30.7, 32.0, 0],
+    ['Triangulum Australe', 242.9, -67.8, 0],
+    ['Tucana', 349.2, -63.1, 0],
+    ['Ursa Major', 164.9, 53.1, 0],
+    ['Ursa Minor', 236.4, 79.7, 0],
+    ['Vela', 142.4, -49.0, 0],
+    ['Virgo', 198.4, -0.8, 1],
+    ['Volans', 123.1, -68.1, 0],
+    ['Vulpecula', 296.7, 25.2, 0]
+  ];
+  const CONST_DIST = 12000; // pc — spokes/labels sit on a 12 kpc sphere around the Sun
+  const constLabels = [];
+  let constSpokeMat = null;
+  function buildConstellations() {
+    // faint spokes from the Sun toward each constellation's direction
+    const rayPos = new Float32Array(CONSTELLATIONS.length * 6);
+    CONSTELLATIONS.forEach((c, i) => {
+      const p = eqToGC(c[1], c[2], CONST_DIST);
+      rayPos[i * 6] = SUN_POS[0]; rayPos[i * 6 + 1] = SUN_POS[1]; rayPos[i * 6 + 2] = SUN_POS[2];
+      rayPos[i * 6 + 3] = p[0]; rayPos[i * 6 + 4] = p[1]; rayPos[i * 6 + 5] = p[2];
+      constLabels.push({ name: c[0], pos: p, cls: c[3] ? 'const zodiac' : 'const', min: 0, max: 200000, layer: 'const' });
+    });
+    const rayGeom = new THREE.BufferGeometry();
+    rayGeom.setAttribute('position', new THREE.BufferAttribute(rayPos, 3));
+    constSpokeMat = new THREE.LineBasicMaterial({
+      color: 0x54627e, transparent: true, opacity: 0.4, depthWrite: false
+    });
+    addLayer('const', new THREE.LineSegments(rayGeom, constSpokeMat));
+    // ecliptic ring around the Sun (the zodiac band)
+    const EPS = 23.4393 * D, ecl = [];
+    for (let i = 0; i <= 96; i++) {
+      const lam = i / 96 * 2 * Math.PI;
+      const dec = Math.asin(Math.sin(EPS) * Math.sin(lam));
+      const ra = Math.atan2(Math.sin(lam) * Math.cos(EPS), Math.cos(lam));
+      const p = eqToGC(((ra / D) % 360 + 360) % 360, dec / D, CONST_DIST);
+      ecl.push(new THREE.Vector3(p[0], p[1], p[2]));
+    }
+    const eclGeom = new THREE.BufferGeometry().setFromPoints(ecl);
+    addLayer('const', new THREE.Line(eclGeom, new THREE.LineBasicMaterial({
+      color: 0xc8a85a, transparent: true, opacity: 0.45, depthWrite: false
+    })));
+
+    // stick figures: real stars at their true 3D distances around the Sun — the shapes
+    // only line up when viewed from the Sun's own position (data: constellation-figures.js)
+    const figGC = [];
+    const fpos = new Float32Array(CONST_FIG_STARS.length * 3);
+    const fcol = new Float32Array(CONST_FIG_STARS.length * 3);
+    CONST_FIG_STARS.forEach((s, i) => {
+      const p = eqToGC(s[0], s[1], s[2]);
+      figGC.push(p);
+      fpos[i * 3] = p[0]; fpos[i * 3 + 1] = p[1]; fpos[i * 3 + 2] = p[2];
+      const b = Math.max(0.3, Math.min(1, 1.12 - s[3] / 5));   // V magnitude -> brightness
+      fcol[i * 3] = b; fcol[i * 3 + 1] = b * 0.93; fcol[i * 3 + 2] = b * 0.8;
+    });
+    addLayer('const', makeCloud(fpos, fcol, { size: 3.4, opacity: 0.95 }));
+    const lpos = new Float32Array(CONST_FIG_LINES.length * 6);
+    CONST_FIG_LINES.forEach((l, i) => {
+      const a = figGC[l[0]], b = figGC[l[1]];
+      lpos[i * 6] = a[0]; lpos[i * 6 + 1] = a[1]; lpos[i * 6 + 2] = a[2];
+      lpos[i * 6 + 3] = b[0]; lpos[i * 6 + 4] = b[1]; lpos[i * 6 + 5] = b[2];
+    });
+    const figGeom = new THREE.BufferGeometry();
+    figGeom.setAttribute('position', new THREE.BufferAttribute(lpos, 3));
+    addLayer('const', new THREE.LineSegments(figGeom, new THREE.LineBasicMaterial({
+      color: 0xd8b878, transparent: true, opacity: 0.28, depthWrite: false
+    })));
   }
 
   /* ---------------- scale rings & axes ---------------- */
@@ -915,6 +1074,7 @@
     for (const c of clusterLabels) addLabel(c.name, c.pos, c.cls, c.min, c.max, c.layer);
     for (const s of satLabels) addLabel(s.name, s.pos, s.cls, s.min, s.max, s.layer);
     for (const s of starLabels) addLabel(s.name, s.pos, s.cls, s.min, s.max, s.layer);
+    for (const c of constLabels) addLabel(c.name, c.pos, c.cls, c.min, c.max, c.layer);
     // ring labels (placed at -50 deg, slightly below the plane, to stay clear in any view)
     const rl = (r) => [r * Math.cos(-50 * D), r * Math.sin(-50 * D), -1200];
     addLabel('5 kpc ≈ 16k ly', rl(5000), 'ring', 0, 90000, 'rings');
@@ -945,7 +1105,7 @@
     }
   }
   function layerOn(name) {
-    const map = { arms: 't-arms', gc: 't-gc', sats: 't-sats', stars: 't-stars', rings: 't-rings' };
+    const map = { arms: 't-arms', gc: 't-gc', sats: 't-sats', stars: 't-stars', rings: 't-rings', const: 't-const' };
     const id = map[name];
     return id ? document.getElementById(id).checked : true;
   }
@@ -1077,6 +1237,7 @@
     bind('t-gc', ['gc']);
     bind('t-sats', ['sats']);
     bind('t-stars', ['stars']);
+    bind('t-const', ['const']);
   }
 
   /* ---------------- HUD ---------------- */
@@ -1413,6 +1574,7 @@
   buildStars();
   buildNamedNebulae();
   buildMarkers();
+  buildConstellations();
   buildRings();
   buildLabels();
   setupControls(canvas);
@@ -1449,6 +1611,11 @@
     const f = clamp(0, 1, (dSun - 1400) / 2600); // 0 at the Sun, 1 beyond ~4 kpc
     for (const o of (layers.dust || [])) o.material.opacity = 0.62 * f;
     for (const o of (layers.hii || [])) o.material.opacity = 0.7 * f;
+    // galaxy-scale constellation spokes fade out when diving into the solar
+    // neighborhood, where the stick figures take over
+    if (constSpokeMat) constSpokeMat.opacity = 0.4 * clamp(0, 1, (dSun - 700) / 2200);
+    // the Sun's glare fades out on close approach so nearby stars/figures stay visible
+    if (sunGlow) sunGlow.material.opacity = 0.7 * clamp(0, 1, (dSun - 10) / 90);
   }
 
   let lastT = performance.now();
